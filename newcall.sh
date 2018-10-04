@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.5.0
+# Version 1.5.1
 
 # VARS
 
@@ -29,17 +29,17 @@ ULINE=$(echo -en '\033[4m')         # Underline
 
 # DNS Servers - If you add any here, be sure to add them to the CASE construct.
 # Worldwide Public DNS servers from public-dns.info. Valid as of: Oct '18.
-# Worldwide servers only used for DNS propagation checking. Enterying the var
+# Worldwide servers only used for DNS propagation checking. Using the var
 # name will NOT allow them to work. Only if the IP is entered.
+IMH='74.124.210.242'        #InMotion Hosting
+RES='216.194.168.112'       #IMH Resellers
 GOOG='8.8.8.8'              #Google
 CF='1.1.1.1'                #Cloudflare
 L3='209.244.0.3'            #Level3
 QUAD='9.9.9.9'              #Quad9
-IMH='74.124.210.242'        #InMotion Hosting
-RES='216.194.168.112'       #IMH Resellers
-OPEN='208.67.222.222'       #OpenDNS
-NIC='174.138.48.29'         #OpenNIC
-UK='5.133.40.77'            #PowerDNS (UK)
+OPEN='208.67.222.222'       #OpenDNS 
+NIC='174.138.48.29'         #OpenNIC (New York)
+UK='77.242.200.197'         #PNAP.net (UK)
 INDIA='103.49.206.241'      #Ongole (India)
 CHINA='180.76.76.76'        #Baidu DNS (China)
 SAFRICA='197.189.228.154'   #PowerDNS (South Africa)
@@ -50,36 +50,34 @@ SAMERICA='200.49.159.68'    #FiberTel (Argentina)
 
 # FUNCTIONS
 usage() {
-    echo ""
-    echo "${LRED}Usage${RESTORE}: newcall <domain> [dns]"
-    echo ""
-    echo "<domain> - ${WHITE}Required${RESTORE} - This is the TLD to search."
-    echo ""
-    echo "[dns]    - (Optional) The DNS server to be used."
-    echo ""
-    echo "${WHITE}Built-In Public DNS Options include:${RESTORE}"
-    echo "  Default: 1.1.1.1 (Cloudflare Public DNS)"
-    echo "  'imh' or 'int': InMotion Hosting DNS"
-    echo "  'res': InMotion Reseller DNS"
-    echo "  'goog': Google Public DNS"
-    echo "  'open': OpenDNS Public DNS"
-    echo "  'quad': Quad9 Public DNS"
-    echo "  'l3': Level3 Public DNS"
-    echo "  'nic': OpenNIC Public DNS"
-    echo "  'vz': Verizon Germany DNS"
-    echo "  -OR- Any manually entered IP for a public DNS server."
-    echo ""
-    echo "  '${LRED}prop${RESTORE}': This will run a DNS propagation test for the SOA record"
-    echo "          and display the result from each of the built-in DNS"
-    echo "          servers. You'll need to compare the SOA serial numbers"
-    echo "          of each output to see if the SOAs match. If they do,"
-    echo "          then propagation has reached the DNS server in question."
-    echo "  ${LBLUE}NOTE:${RESTORE} Using the 'prop' option ${ULINE}will${RESTORE} test international servers."
-    echo ""
-    echo "EXAMPLES: newcall hummdis.com goog"
-    echo "          newcall hummdis.com"
-    echo "          newcall hummdis.com 64.6.64.6"
-    echo ""
+    echo "
+${LRED}Usage${RESTORE}: newcall <domain> [dns]
+
+<domain> - ${WHITE}Required${RESTORE} - This is the TLD to search.
+
+[dns]    - (Optional) The DNS server to be used.
+${WHITE}Built-In Public DNS Options include:${RESTORE}
+    Default: InMotion Hosting DNS Server
+    res : InMotion Reseller DNS
+    cf  : Cloudflare Public DNS
+    goog: Google Public DNS
+    open: OpenDNS Public DNS
+    quad: Quad9 Public DNS
+    l3  : Level3 Public DNS
+    nic : OpenNIC Public DNS
+    -OR- Any manually entered ${LCYAN}IP${RESTORE} for a public DNS server.
+
+    ${LRED}prop${RESTORE}: This will run a DNS propagation test for the SOA record
+          and display the result from each of the built-in DNS
+          servers. You'll need to compare the SOA serial numbers
+          of each output to see if the SOAs match. If they do,
+          then propagation has reached the DNS server in question.
+    ${LBLUE}NOTE:${RESTORE} Using the 'prop' option ${ULINE}will${RESTORE} test international servers.
+
+EXAMPLES:   newcall hummdis.com goog
+            newcall hummdis.com
+            newcall hummdis.com 64.6.64.6
+"
 }
 
 perform_search() {
@@ -125,13 +123,15 @@ set_dns() {
 
 prop_check() {
     # This is the DNS propgation check for the given domain. We'll check all
-    # of the DNS servers we know.
-    echo "${LRED}***** CHECKING DNS PROPAGATION FOR: ${DOMAIN} *****${RESTORE}"
-    for DNS in $IMH $RES $CF $GOOG $L3 $QUAD $OPEN $NIC $SAMERICA $UK $INIDA $JAPAN $SAFRICA $DUNDER
+    # of the DNS servers we know, including some not used unless this is run.
+    echo "${LRED}***** CHECKING DNS PROPAGATION FOR:${RESTORE} ${FDOMAIN} ${LRED}*****${RESTORE}"
+    for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $UK $INDIA $CHINA $SAFRICA $DUNDER $SAMERICA
     do
         set_dns $DNS
+        # BUG: 20181004-01: There's a bug here that causes the 10th server in the list, no
+        # matter what it is to exeute the next two lines twice.
         echo "DNS: ${LBLUE}${FDNS_SERVER}${RESTORE}:"
-        echo ${LYELLOW}`dig @$DNS $DOMAIN SOA +short | cut -d ' ' -f3 -`${RESTORE}
+        echo ${WHITE}`dig @$DNS $DOMAIN SOA +short`${RESTORE}
     done
 }
 
@@ -155,8 +155,8 @@ esac
 
 # Now, to determine the DNS server entered/requested.
 case $2 in
-    imh|int) # InMotion
-        set_dns $IMH
+    '') # InMotion (DEFAULT)
+        set_dns $CF
         perform_search
         ;;
     res) # InMotion Reseller
@@ -179,16 +179,16 @@ case $2 in
         set_dns $L3
         perform_search
         ;;
-    prop) # Check all for propagation.
-        prop_check 
-        ;;
     nic) # OpenNIC
         set_dns $NIC
         perform_search
         ;;
-    '') # Default is Cloudfare.
+    cf) # Default is Cloudfare.
         set_dns $CF
         perform_search
+        ;;
+    prop) # Check all for propagation.
+        prop_check 
         ;;
     *) # Use whatever was passed as the 2nd argument. We assume valid IP.
         set_dns $2
