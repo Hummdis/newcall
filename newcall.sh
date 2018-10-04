@@ -5,62 +5,86 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.4.5 | Created 2018/09/12 | Updated: 2018/09/29
-# Changes
-#       1.4.5: Changed colors so odd characters don't print.
-#       1.4.4: WHOIS command using "grep -i" now.
-#       1.4.3: Small modifications/adjustments.
-#       1.4.2: Change the usage output just a bit. Nothing major.
-#       1.4.1: Updated many areas to reduce lines of code.
-#       1.4.1: Added Quad9, Reseller, Level3 as DNS built-ins.
-#       1.4.1: Changed how the DNS server displays so that it's the name, not IP.
-#       1.4.1: Updated manner in which colors are processed and displayed.
+# Version 1.5.0
 
-# Vars
-RESTORE=$(echo -en '\033[0m')
-LRED=$(echo -en '\033[01;31m')
-LGREEN=$(echo -en '\033[01;32m')
-LYELLOW=$(echo -en '\033[01;33m')
-LBLUE=$(echo -en '\033[01;34m')
-LCYAN=$(echo -en '\033[01;36m')
-WHITE=$(echo -en '\033[01;37m')
+# VARS
 
-# DNS Servers
-GOOG='8.8.8.8'         #Google
-CF='1.1.1.1'           #CloudFlare
-L3='209.244.0.3'       #Level3
-QUAD='9.9.9.9'         #Quad9
-IMH='74.124.210.242'   #InMotion Hosting
-RES='216.194.168.112'  #IMH Resellers
-OPEN='208.67.222.222'  #OpenDNS
+# These are just place holders. They're set elsewhere.
+DOMAIN='' # The passed domain.
+FDOMAIN='' # Formatted domain.
+DNS_SERVER='' # DNS server.
+FDNS_SERVER='' # Formatted DNS server.
+DNS='' # Used in Loop
 
-# Functions
+# Formatting Vars
+RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
+LRED=$(echo -en '\033[01;31m')      # Bold Red
+LGREEN=$(echo -en '\033[01;32m')    # Bold Green
+LYELLOW=$(echo -en '\033[01;33m')   # Bold Yellow
+LBLUE=$(echo -en '\033[01;94m')     # Bold Light Blue
+LCYAN=$(echo -en '\033[01;36m')     # Bold Cyan
+LMAGENTA=$(echo -en '\033[01;35m')  # Bold Magenta
+WHITE=$(echo -en '\033[01;37m')     # Bold White
+ULINE=$(echo -en '\033[4m')         # Underline
+
+# DNS Servers - If you add any here, be sure to add them to the CASE construct.
+# Worldwide Public DNS servers from public-dns.info. Valid as of: Oct '18.
+# Worldwide servers only used for DNS propagation checking. Enterying the var
+# name will NOT allow them to work. Only if the IP is entered.
+GOOG='8.8.8.8'              #Google
+CF='1.1.1.1'                #Cloudflare
+L3='209.244.0.3'            #Level3
+QUAD='9.9.9.9'              #Quad9
+IMH='74.124.210.242'        #InMotion Hosting
+RES='216.194.168.112'       #IMH Resellers
+OPEN='208.67.222.222'       #OpenDNS
+NIC='174.138.48.29'         #OpenNIC
+UK='5.133.40.77'            #PowerDNS (UK)
+INDIA='103.49.206.241'      #Ongole (India)
+CHINA='180.76.76.76'        #Baidu DNS (China)
+SAFRICA='197.189.228.154'   #PowerDNS (South Africa)
+DUNDER='212.186.238.209'    #UPC Business (Australia)
+SAMERICA='200.49.159.68'    #FiberTel (Argentina)
+
+## End VARS
+
+# FUNCTIONS
 usage() {
-    echo "Usage: newcall <domain> [dns]"
+    echo ""
+    echo "${LRED}Usage${RESTORE}: newcall <domain> [dns]"
     echo ""
     echo "<domain> - ${WHITE}Required${RESTORE} - This is the TLD to search."
     echo ""
     echo "[dns]    - (Optional) The DNS server to be used."
     echo ""
     echo "${WHITE}Built-In Public DNS Options include:${RESTORE}"
-    echo "  Default: 1.1.1.1 (Cloudfare Public DNS)"
-    echo "  'imh' or 'int': InMotion DNS"
+    echo "  Default: 1.1.1.1 (Cloudflare Public DNS)"
+    echo "  'imh' or 'int': InMotion Hosting DNS"
     echo "  'res': InMotion Reseller DNS"
     echo "  'goog': Google Public DNS"
     echo "  'open': OpenDNS Public DNS"
     echo "  'quad': Quad9 Public DNS"
     echo "  'l3': Level3 Public DNS"
+    echo "  'nic': OpenNIC Public DNS"
+    echo "  'vz': Verizon Germany DNS"
     echo "  -OR- Any manually entered IP for a public DNS server."
+    echo ""
+    echo "  '${LRED}prop${RESTORE}': This will run a DNS propagation test for the SOA record"
+    echo "          and display the result from each of the built-in DNS"
+    echo "          servers. You'll need to compare the SOA serial numbers"
+    echo "          of each output to see if the SOAs match. If they do,"
+    echo "          then propagation has reached the DNS server in question."
+    echo "  ${LBLUE}NOTE:${RESTORE} Using the 'prop' option ${ULINE}will${RESTORE} test international servers."
     echo ""
     echo "EXAMPLES: newcall hummdis.com goog"
     echo "          newcall hummdis.com"
     echo "          newcall hummdis.com 64.6.64.6"
+    echo ""
 }
 
 perform_search() {
     # For informational purposes, tell the user what DNS server we're using.
     echo "Using $FDNS_SERVER DNS Server for results."
-    sleep 1
 
     # IP information.
     echo "------"
@@ -85,31 +109,35 @@ perform_search() {
 
     # WHOIS information
     echo "The ${LYELLOW}WHOIS${RESTORE} for $FDOMAIN is:"
-        # Some WHOIS servers respond in lowercase. We need to pass the '-i' in grep.
-        whois $DOMAIN | grep 'Creation\|Expir\|Admin Email\|Server\|Status\|DNSSEC'
+        whois -H $DOMAIN | grep 'Date:\|Expir\|Email:\|Server:\|Status:\|DNSSEC:'
     echo "------"
-    echo -n "${LGREEN}Checks completed for${RESTORE} $FDOMAIN ${LGREEN}on:"
+    echo -n "${LGREEN}Checks completed for${RESTORE} $FDOMAIN ${LGREEN}on: "
         date
     echo "Using DNS: $FDNS_SERVER" # Reprint to remind.
 }
 
 set_dns() {
     # We have to do this so many times, just make a function for it.
+    # It also allows for the loop to work more effectively.
     DNS_SERVER=$1
-    FDNS_SERVER=${LCYAN}`dig @$DNS_SERVER -x $DNS_SERVER +short`${RESTORE}
+    FDNS_SERVER=${LCYAN}`dig -x $DNS_SERVER +short`${RESTORE}
 }
 
 prop_check() {
     # This is the DNS propgation check for the given domain. We'll check all
     # of the DNS servers we know.
-    echo "${LRED}***** CHECKING DNS PROPAGATION FOR ${DOMAIN}${RESTORE}"
-    for DNS in $GOOG $CF $L3 $QUAD $IMH $RES $OPEN
+    echo "${LRED}***** CHECKING DNS PROPAGATION FOR: ${DOMAIN} *****${RESTORE}"
+    for DNS in $IMH $RES $CF $GOOG $L3 $QUAD $OPEN $NIC $SAMERICA $UK $INIDA $JAPAN $SAFRICA $DUNDER
     do
         set_dns $DNS
         echo "DNS: ${LBLUE}${FDNS_SERVER}${RESTORE}:"
-        echo ${LYELLOW}`dig @$DNS $DOMAIN SOA +short`${RESTORE}
+        echo ${LYELLOW}`dig @$DNS $DOMAIN SOA +short | cut -d ' ' -f3 -`${RESTORE}
     done
 }
+
+## End FUNCTIONS
+
+# Actual tool process.
 
 # Make sure we got a domain provided. If not, display usage and exit.
 case $1 in
@@ -151,17 +179,23 @@ case $2 in
         set_dns $L3
         perform_search
         ;;
+    prop) # Check all for propagation.
+        prop_check 
+        ;;
+    nic) # OpenNIC
+        set_dns $NIC
+        perform_search
+        ;;
     '') # Default is Cloudfare.
         set_dns $CF
         perform_search
-        ;;
-    prop) # Check all for propagation.
-        prop_check 
         ;;
     *) # Use whatever was passed as the 2nd argument. We assume valid IP.
         set_dns $2
         perform_search
         ;;
 esac
+
+# All done!
 
 exit 0
