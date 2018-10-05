@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.5.1
+# Version 1.5.2
 
 # VARS
 
@@ -31,20 +31,20 @@ ULINE=$(echo -en '\033[4m')         # Underline
 # Worldwide Public DNS servers from public-dns.info. Valid as of: Oct '18.
 # Worldwide servers only used for DNS propagation checking. Using the var
 # name will NOT allow them to work. Only if the IP is entered.
-IMH='74.124.210.242'        #InMotion Hosting
-RES='216.194.168.112'       #IMH Resellers
-GOOG='8.8.8.8'              #Google
-CF='1.1.1.1'                #Cloudflare
-L3='209.244.0.3'            #Level3
-QUAD='9.9.9.9'              #Quad9
-OPEN='208.67.222.222'       #OpenDNS 
-NIC='174.138.48.29'         #OpenNIC (New York)
-UK='77.242.200.197'         #PNAP.net (UK)
-INDIA='103.49.206.241'      #Ongole (India)
-CHINA='180.76.76.76'        #Baidu DNS (China)
-SAFRICA='197.189.228.154'   #PowerDNS (South Africa)
-DUNDER='212.186.238.209'    #UPC Business (Australia)
-SAMERICA='200.49.159.68'    #FiberTel (Argentina)
+IMH='74.124.210.242'        # InMotion Hosting
+RES='216.194.168.112'       # IMH Resellers
+GOOG='8.8.8.8'              # Google
+CF='1.1.1.1'                # Cloudflare
+L3='209.244.0.3'            # Level3
+QUAD='9.9.9.9'              # Quad9
+OPEN='208.67.222.222'       # OpenDNS 
+NIC='174.138.48.29'         # OpenNIC (New York)
+FRANCE='80.248.213.163'     # WaterAir (France)
+INDIA='1.33.208.35'         # NTTPC (India)
+JAPAN='101.110.36.163'      # Chatan (Japan)
+SAFRICA='197.189.228.154'   # PowerDNS (South Africa)
+DUNDER='212.186.238.209'    # UPC Business (Australia)
+SAMERICA='200.49.159.68'    # FiberTel (Argentina)
 
 ## End VARS
 
@@ -107,7 +107,7 @@ perform_search() {
 
     # WHOIS information
     echo "The ${LYELLOW}WHOIS${RESTORE} for $FDOMAIN is:"
-        whois -H $DOMAIN | grep 'Date:\|Expir\|Email:\|Server:\|Status:\|DNSSEC:'
+        whois $DOMAIN | grep 'Date:\|Expir\|Email:\|Server:\|Status:\|DNSSEC:'
     echo "------"
     echo -n "${LGREEN}Checks completed for${RESTORE} $FDOMAIN ${LGREEN}on: "
         date
@@ -125,13 +125,11 @@ prop_check() {
     # This is the DNS propgation check for the given domain. We'll check all
     # of the DNS servers we know, including some not used unless this is run.
     echo "${LRED}***** CHECKING DNS PROPAGATION FOR:${RESTORE} ${FDOMAIN} ${LRED}*****${RESTORE}"
-    for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $UK $INDIA $CHINA $SAFRICA $DUNDER $SAMERICA
+    for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $FRANCE $INDIA $JAPAN $SAFRICA $DUNDER $SAMERICA
     do
         set_dns $DNS
-        # BUG: 20181004-01: There's a bug here that causes the 10th server in the list, no
-        # matter what it is to exeute the next two lines twice.
         echo "DNS: ${LBLUE}${FDNS_SERVER}${RESTORE}:"
-        echo ${WHITE}`dig @$DNS $DOMAIN SOA +short`${RESTORE}
+        echo ${WHITE}`dig @$DNS $DOMAIN SOA +tcp +short`${RESTORE}
     done
 }
 
