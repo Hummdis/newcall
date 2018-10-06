@@ -153,8 +153,8 @@ esac
 
 # Now, to determine the DNS server entered/requested.
 case $2 in
-    '') # InMotion (DEFAULT)
-        set_dns $CF
+    imh|int) # InMotion (Default)
+        set_dns $IMH
         perform_search
         ;;
     res) # InMotion Reseller
@@ -181,7 +181,7 @@ case $2 in
         set_dns $NIC
         perform_search
         ;;
-    cf) # Default is Cloudfare.
+    '') # Cloudfare.
         set_dns $CF
         perform_search
         ;;
