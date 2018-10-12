@@ -242,9 +242,48 @@ case $1 in
         ;;
 esac
 
-# Determine the DNS server entered/requested. This should always be arg 2 and up.
-# This is either the DNS server specification or the type of search to run.
-# Starting in 1.6.2 these CAN be stacked.  We'll loop through the arguements.
+# Now, to determine the DNS server entered/requested.
+case $2 in
+    imh|int) # InMotion (Default)
+        set_dns $IMH
+        perform_search
+        ;;
+    res) # InMotion Reseller
+        set_dns $RES
+        perform_search
+        ;;
+    goog) # Google
+        set_dns $GOOG
+        perform_search
+        ;;
+    open) # OpenDNS
+        set_dns $OPEN
+        perform_search
+        ;;
+    quad) # Quad9
+        set_dns $QUAD
+        perform_search
+        ;;
+    l3) # Level3
+        set_dns $L3
+        perform_search
+        ;;
+    nic) # OpenNIC
+        set_dns $NIC
+        perform_search
+        ;;
+    '') # Cloudfare.
+        set_dns $CF
+        perform_search
+        ;;
+    prop) # Check all for propagation.
+        prop_check 
+        ;;
+    *) # Use whatever was passed as the 2nd argument. We assume valid IP.
+        set_dns $2
+        perform_search
+        ;;
+esac
 
 # If no argument is passed with the domain, we have to set $2 to something.
 if [ -z "$2" ]
