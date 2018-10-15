@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.3
+# Version 1.6.4
 
 # VARS
 
@@ -121,6 +121,9 @@ default_search() {
     echo -n "${LGREEN}Checks completed for${RESTORE} $FDOMAIN ${LGREEN}on: "
         date
     echo "Using DNS: $FDNS_SERVER" # Reprint to remind.
+
+	# We're done. Don't allow the default_search to be stacked.
+	exit 0
 }
 
 ip_search() {
@@ -188,18 +191,20 @@ set_dns() {
     # It also allows for the loop to work more effectively.
     # Note: $1 in this case is the server passed to this function!
     DNS_SERVER=$1
-    FDNS_SERVER=${LGREEN}`dig -x $DNS_SERVER +short`${RESTORE}
+    FDNS_SERVER=${WHITE}`dig -x $DNS_SERVER +short`${RESTORE}
 }
 
 prop_check() {
     # This is the DNS propgation check for the given domain. We'll check all
     # of the DNS servers we know, including some not used unless this is run.
-    # FUTURE: Check the result of each and give a summary of how many out of
-    # 17 have matching SOAs.
-    echo "${LYELLOW}***** 17 WORLDWIDE DNS PROPAGATION CHECK FOR:${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
-    for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9
+    echo -e "\n${LYELLOW}***** WORLDWIDE DNS PROPAGATION CHECK FOR:${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
+    
+	DNS_COUNT=0
+	MATCH=0
+	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9
     do
-        set_dns $DNS
+        DNS_COUNT=$((DNS_COUNT+1))
+		set_dns $DNS
         
         # If there is not a PTR for the DNS record, for whatever reason, display the IPv4.
         if [ -z "$FDNS_SERVER" ]
@@ -209,20 +214,54 @@ prop_check() {
             SERVER=$FDNS_SERVER
         fi
         
-        # We need the results of the query so that we can display an actual timeout message since
-        # 'dig' doesn't display one for us. Also reports if nothing is returned.
-        RESULT=`dig @$DNS $DOMAIN SOA +short`
-
+        if [ "$DNS_COUNT" == 1 ]
+        then
+            # First, we want to query the authoritative name server for the given domain.  This way
+            # we can confirm if the SOA from other servers match the authoritative.
+            AUTH_NS=`dig +noall +answer +authority $DOMAIN NS | awk '{ print $5 }' ORS=' ' | awk '{ print $1 }'`
+            AUTH=`dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }'`
+            if [ -z "$AUTH" ]
+            then
+                echo "Unable to obtain a valid SOA from authoritative name server ${AUTH_NS}."
+                echo "Since this is the master, we have nothing to compare to."
+                exit 1
+            else
+                # We have a valid result out of the gate. Use this.
+                echo "Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}"
+                RESULT=`dig @$AUTH_NS $DOMAIN SOA +short`
+                SOA=$AUTH
+            fi
+        else
+            # We need the results of the query so that we can display an actual timeout message since
+            # 'dig' doesn't display one for us. Also reports if nothing is returned.
+            RESULT=`dig @$DNS $DOMAIN SOA +short`
+        fi
+        
         # If the result is empty, display a notice with the IP address of the server.
         if [ -z "$RESULT" ]
-        then
-            RESULT="${LRED}No response from server (IP: ${DNS})"
-        fi
+            then
+                RESULT="No response from server (IP: ${DNS})"
+                SOA='' # Reset so there's no match.
+        else
+  			SOA=`echo $RESULT | awk '{ print $3 }'`
+        fi    		
+    	
+    	# Compare the two and increment if they match.
+		if [ "$SOA" == "$AUTH" ]
+		then
+            MATCH=$((MATCH+1))
+            RESULT=${LGREEN}${RESULT}${RESTORE}
+		else
+		    RESULT=${LRED}${RESULT}${RESTORE}
+		fi
         
         # Print the results. Remember, FDNS_SERVER is already formatted.
         echo "DNS: ${SERVER}:"
-        echo "    ${WHITE}${RESULT}${RESTORE}"
+        echo "    $RESULT"
     done
+    
+    # Print the match results.
+    echo "${LYELLOW}**** MATCH RESULTS: $MATCH OF ${DNS_COUNT} ****${RESTORE}"
 }
 
 ## End FUNCTIONS
@@ -242,57 +281,15 @@ case $1 in
         ;;
 esac
 
-# Now, to determine the DNS server entered/requested.
-case $2 in
-    imh|int) # InMotion (Default)
-        set_dns $IMH
-        perform_search
-        ;;
-    res) # InMotion Reseller
-        set_dns $RES
-        perform_search
-        ;;
-    goog) # Google
-        set_dns $GOOG
-        perform_search
-        ;;
-    open) # OpenDNS
-        set_dns $OPEN
-        perform_search
-        ;;
-    quad) # Quad9
-        set_dns $QUAD
-        perform_search
-        ;;
-    l3) # Level3
-        set_dns $L3
-        perform_search
-        ;;
-    nic) # OpenNIC
-        set_dns $NIC
-        perform_search
-        ;;
-    '') # Cloudfare.
-        set_dns $CF
-        perform_search
-        ;;
-    prop) # Check all for propagation.
-        prop_check 
-        ;;
-    *) # Use whatever was passed as the 2nd argument. We assume valid IP.
-        set_dns $2
-        perform_search
-        ;;
-esac
-
-# If no argument is passed with the domain, we have to set $2 to something.
+# If no argument is passed with the domain, we have to set $2 to something
+# for the loop to work correctly and allow stacking of commands.
 if [ -z "$2" ]
 then
     # Leave $1 alone! Just set the $2 variable to the default NS
     set -- "$1" "$DEFDNS"
 fi
 
-# Loop through each of the passed arguments.
+# Loop through each of the passed arguments starting at the second one.
 for i in "${@:2}"
 do
     case $i in
@@ -300,7 +297,7 @@ do
             # See note in DNS variables to know why this can't be default.
             set_dns $IMH
             default_search
-            ;;
+			;;
         res) # InMotion Reseller
             set_dns $RES
             default_search
@@ -312,7 +309,7 @@ do
         open) # OpenDNS
             set_dns $OPEN
             default_search
-            ;;
+			;;
         quad) # Quad9
             set_dns $QUAD
             default_search
@@ -332,6 +329,7 @@ do
         prop) # Check world DNS propagation.
             prop_check
             ;;
+		# These can be stacked.
         arin) # Perform an ARIN IP check.
             set_dns $DEFDNS
             arin_search
@@ -359,17 +357,19 @@ do
             ip_search
             ;;
         spam) # Check NS, PTR, MX, SPF and DMARC entries to help find causes of spam.
+            # This is NOT stackable. Only run this command, not others stacked.
             set_dns $DEFDNS
             ns_check
             ptr_search
             mx_search
             spf_check
             dmarc_check
+            exit 0
             ;;
         *) # Use whatever was passed as the 2nd argument. We assume valid IP.
             set_dns $2
             default_search
-            ;;
+			;;
     esac
 done
 
