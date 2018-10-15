@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.4
+# Version 1.6.5
 
 # VARS
 
@@ -262,6 +262,7 @@ prop_check() {
     
     # Print the match results.
     echo "${LYELLOW}**** MATCH RESULTS: $MATCH OF ${DNS_COUNT} ****${RESTORE}"
+	ehco -e ""
 }
 
 ## End FUNCTIONS
@@ -366,6 +367,10 @@ do
             dmarc_check
             exit 0
             ;;
+		ptr) # Print the PTR results.
+			set_dns $DEFDNS
+			ptr_search
+			;;
         *) # Use whatever was passed as the 2nd argument. We assume valid IP.
             set_dns $2
             default_search
