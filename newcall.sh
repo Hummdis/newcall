@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.5
+# Version 1.6.6
 
 # VARS
 
@@ -26,6 +26,7 @@ LBLUE=$(echo -en '\033[01;94m')     # Bold Light Blue
 LCYAN=$(echo -en '\033[01;36m')     # Bold Cyan
 LMAGENTA=$(echo -en '\033[01;35m')  # Bold Magenta
 WHITE=$(echo -en '\033[01;37m')     # Bold White
+BBLUE=$(echo -en '\e[44m')      # Blue Background   
 ULINE=$(echo -en '\033[4m')         # Underline
 
 # DNS Servers
@@ -60,15 +61,15 @@ DEFDNS="$CF"
 # FUNCTIONS
 usage() {
     echo "
-${LRED}Usage${RESTORE}: newcall <domain> [dns]
+${LRED}Usage${RESTORE}: newcall <domain> [dns | ..OPTIONS..]
 
 <domain> - ${WHITE}Required${RESTORE} - This is the TLD to search.
 
 [dns]    - (Optional) The DNS server to be used.
 ${WHITE}Built-In Public DNS Options include:${RESTORE}
-    Default: InMotion Hosting DNS Server
+    imh | int: InMotion Hosting DNS Server
     res : InMotion Reseller DNS
-    cf  : Cloudflare Public DNS
+    cf  : Cloudflare Public DNS --DEFAULT--
     goog: Google Public DNS
     open: OpenDNS Public DNS
     quad: Quad9 Public DNS
@@ -77,19 +78,21 @@ ${WHITE}Built-In Public DNS Options include:${RESTORE}
     -OR- Any manually entered ${LCYAN}IP${RESTORE} for a public DNS server.
 
     ${LRED}prop${RESTORE}: This will run a DNS propagation test for the SOA record
-          and display the result from each of the built-in DNS
-          servers. You'll need to compare the SOA serial numbers
-          of each output to see if the SOAs match. If they do,
-          then propagation has reached the DNS server in question.
-    ${LBLUE}NOTE:${RESTORE} Using the 'prop' option ${ULINE}will${RESTORE} test international servers.   
-      ${LRED}mx${RESTORE}:   This will run a check for MX records only using the
+          and display the result from each of the built-in DNS servers. This
+		  check will first obtain the SOA from the authoritative name server
+		  for the given domain, then compare the SOA of the built-in DNS
+		  servers.  A summary at the end will report how many matches are
+		  found.
+    ${LBLUE}NOTE:${RESTORE} Using the 'prop' option ${ULINE}will${RESTORE} test international servers.
+      ${LRED}mx${RESTORE}: This will run a check for MX records only using the
           default DNS servers.
-      ${LRED}ns${RESTORE}:   This will run a check of the NS records from WHOIS
+      ${LRED}ns${RESTORE}: This will run a check of the NS records from WHOIS
           using the default DNS servers.    
      ${LRED}spf${RESTORE}: This will run a check for SPF records.
+     ${LRED}ptr${RESTORE}: This will return the PTR for the given domain.
     ${LRED}arin${RESTORE}: This runs an ARIN check on the "A" record of the domain.    
    ${LRED}dmarc${RESTORE}: This will run a check for DMARC records.
-    ${LRED}spam${RESTORE}: This will check NS, PTR, MX, SPF and DMARC for causes of
+    ${LRED}spam${RESTORE}: This will check NS, PTR, MX, SPF and DMARC for causes for
           being marked as SPAM or being blacklisted.
 
 EXAMPLES:   newcall hummdis.com goog
@@ -227,7 +230,7 @@ prop_check() {
                 exit 1
             else
                 # We have a valid result out of the gate. Use this.
-                echo "Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}"
+                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${RESTORE}"
                 RESULT=`dig @$AUTH_NS $DOMAIN SOA +short`
                 SOA=$AUTH
             fi
@@ -371,9 +374,14 @@ do
 			set_dns $DEFDNS
 			ptr_search
 			;;
-        *) # Use whatever was passed as the 2nd argument. We assume valid IP.
-            set_dns $2
-            default_search
+        *) # Use the IP passed as the 2nd arg. We do validate or show usage.
+			if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
+			then
+				set_dns $2
+				default_search
+			else
+				usage
+				exit 1
 			;;
     esac
 done
