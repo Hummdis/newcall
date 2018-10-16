@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.6
+# Version 1.6.7
 
 # VARS
 
@@ -30,7 +30,7 @@ BBLUE=$(echo -en '\e[44m')      # Blue Background
 ULINE=$(echo -en '\033[4m')         # Underline
 
 # DNS Servers
-# Worldwide Public DNS servers from public-dns.info. Valid as of: Oct '18.
+# Worldwide Public DNS servers.
 # Worldwide servers only used for DNS propagation checking. Using the var
 # name will not allow them to work. Only if the IP is entered.
 # The default MUST be a truly public server as using a private server, like IMH,
@@ -43,15 +43,22 @@ L3='209.244.0.3'      # Level3
 QUAD='9.9.9.9'        # Quad9
 OPEN='208.67.222.222' # OpenDNS 
 NIC='174.138.48.29'   # OpenNIC (New York)
-W1='80.248.213.163'   # WaterAir (France)
-W2='211.79.61.4'      # Nettlynx (Taiwan)
-W3='202.53.93.10'     # Unknown (India)
-W4='197.189.228.154'  # PowerDNS (South Africa)
-W5='212.186.238.209'  # UPC Business (Australia)
-W6='200.49.159.68'    # FiberTel (Argentina)
-W7='202.46.127.227'   # CNX (Malaysia)
-W8='41.217.204.165'   # Layer3 (Nigeria)
-W9='201.200.130.35'   # ebsseguros.com (Costa Rica)
+VERI='64.6.64.6'      # Verisign
+NORT='199.85.127.10'  # Norton ConnectSafe
+COMO='8.20.247.20' 	  # Comodo Secure DNS
+W1='84.200.69.80'     # DNS Watch
+W2='202.53.93.10'     # Unknown (India)
+W3='197.189.228.154'  # PowerDNS (South Africa)
+W4='200.49.159.68'    # FiberTel (Argentina)
+W5='202.46.127.227'   # CNX (Malaysia)
+W6='41.217.204.165'   # Layer3 (Nigeria)
+W7='45.71.185.100'    # OpenNIC (Ecuador)
+W8='31.171.251.118'   # OpenNIC (Switzerland)
+W9='51.254.25.115'    # OpenNIC (Czech Republic)
+W10='139.59.18.213'   # OpenNIC (India)
+W11='139.99.96.146'   # OpenNIC (Singapore)
+W12='111.67.20.8'     # OpenNIC (Australia)
+W13='5.132.191.104'   # OpenNIC (Austria)
 
 # Set the default DNS server here:
 DEFDNS="$CF"
@@ -61,12 +68,12 @@ DEFDNS="$CF"
 # FUNCTIONS
 usage() {
     echo "
-${LRED}Usage${RESTORE}: newcall <domain> [dns | ..OPTIONS..]
+Usage: newcall <domain> [dns | ..OPTIONS..]
 
 <domain> - ${WHITE}Required${RESTORE} - This is the TLD to search.
 
 [dns]    - (Optional) The DNS server to be used.
-${WHITE}Built-In Public DNS Options include:${RESTORE}
+Built-In Public DNS Options include:
     imh | int: InMotion Hosting DNS Server
     res : InMotion Reseller DNS
     cf  : Cloudflare Public DNS --DEFAULT--
@@ -75,31 +82,35 @@ ${WHITE}Built-In Public DNS Options include:${RESTORE}
     quad: Quad9 Public DNS
     l3  : Level3 Public DNS
     nic : OpenNIC Public DNS
+    veri: Verisign
+    nort: Norton ConnectSafe
+    como: Comodo Secure DNS
     -OR- Any manually entered ${LCYAN}IP${RESTORE} for a public DNS server.
 
-    ${LRED}prop${RESTORE}: This will run a DNS propagation test for the SOA record
-          and display the result from each of the built-in DNS servers. This
-		  check will first obtain the SOA from the authoritative name server
-		  for the given domain, then compare the SOA of the built-in DNS
-		  servers.  A summary at the end will report how many matches are
-		  found.
-    ${LBLUE}NOTE:${RESTORE} Using the 'prop' option ${ULINE}will${RESTORE} test international servers.
-      ${LRED}mx${RESTORE}: This will run a check for MX records only using the
+[OPTIONS] To be used in place of a DNS server.
+
+    prop: This will run a DNS propagation test for the SOA record
+          and display the result from each of the built-in DNS servers as well as
+          a check of additional worldwide DNS servers for full propagation. This
+		  check will first obtain the SOA from the authoritative name server for
+		  the given domain, then compare it with the full list of DNS servers.
+		  servers.  A summary at the end will report how many matches are found.
+      NOTE: Using the 'prop' option ${ULINE}will${RESTORE} test international servers.
+    mx  : This will run a check for MX records only using the
           default DNS servers.
-      ${LRED}ns${RESTORE}: This will run a check of the NS records from WHOIS
+    ns  : This will run a check of the NS records from WHOIS
           using the default DNS servers.    
-     ${LRED}spf${RESTORE}: This will run a check for SPF records.
-     ${LRED}ptr${RESTORE}: This will return the PTR for the given domain.
-    ${LRED}arin${RESTORE}: This runs an ARIN check on the "A" record of the domain.    
-   ${LRED}dmarc${RESTORE}: This will run a check for DMARC records.
-    ${LRED}spam${RESTORE}: This will check NS, PTR, MX, SPF and DMARC for causes for
+    spf : This will run a check for SPF records.
+    ptr : This will return the PTR for the given domain.
+    arin: This runs an ARIN check on the "A" record of the domain.    
+   dmarc: This will run a check for DMARC records.
+    spam: This will check NS, PTR, MX, SPF and DMARC for causes for
           being marked as SPAM or being blacklisted.
 
-EXAMPLES:   newcall hummdis.com goog
-            newcall hummdis.com
-            newcall hummdis.com 64.6.64.6
-            newcall hummdis.com arin
-            newcall hummdis.com ns mx spf dmarc
+EXAMPLES: newcall hummdis.com 
+          newcall hummdis.com veri
+          newcall hummdis.com 64.6.64.6
+          newcall hummdis.com ns mx spf dmarc
 "
 }
 
@@ -107,7 +118,7 @@ default_search() {
     # For informational purposes, tell the user what DNS server we're using.
     echo "Using $FDNS_SERVER DNS Server for results."
 
-    # By default, we'll check IP, Host, MX, SOA and WHOIS.
+    # By default, we'll check IP, Host, MX, and SOA.
     ip_search
     echo "----------"
     ns_check
@@ -117,9 +128,6 @@ default_search() {
     mx_search
     echo "----------"
     soa_search
-    echo "----------"
-    whois_search
-    echo "----------"
     
     echo -n "${LGREEN}Checks completed for${RESTORE} $FDOMAIN ${LGREEN}on: "
         date
@@ -174,7 +182,10 @@ arin_search() {
 ns_check() {
     # This performs the NS check for a given domain.
     echo "${LYELLOW}Name Servers${RESTORE} for $FDOMAIN are:"
-    dig $DOMAIN NS +short | sed 's/^/    /'
+    echo "  DIG results:"
+	dig $DOMAIN NS +short | sed 's/^/    /'
+	echo "  WHOIS NS results:"
+	whois -a -d $DOMAIN | grep -i 'Name Server:' | sed 's/^/    /'
 }
 
 spf_check() {
@@ -194,7 +205,12 @@ set_dns() {
     # It also allows for the loop to work more effectively.
     # Note: $1 in this case is the server passed to this function!
     DNS_SERVER=$1
-    FDNS_SERVER=${WHITE}`dig -x $DNS_SERVER +short`${RESTORE}
+    REV=`dig -x $DNS_SERVER +short`
+    if [ -z "$REV" ]; then
+        FDNS_SERVER=${WHITE}${1}${RESTORE}
+    else
+        FDNS_SERVER=${WHITE}${REV}${RESTORE}
+    fi
 }
 
 prop_check() {
@@ -204,27 +220,25 @@ prop_check() {
     
 	DNS_COUNT=0
 	MATCH=0
-	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9
+	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $VERI $COMO $NORT \
+	           $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 $W13
     do
         DNS_COUNT=$((DNS_COUNT+1))
 		set_dns $DNS
         
         # If there is not a PTR for the DNS record, for whatever reason, display the IPv4.
-        if [ -z "$FDNS_SERVER" ]
-        then
+        if [ -z "$FDNS_SERVER" ]; then
             SERVER=${LCYAN}${DNS}${RESTORE}
         else # Display the PTR as given to us.
             SERVER=$FDNS_SERVER
         fi
         
-        if [ "$DNS_COUNT" == 1 ]
-        then
+        if [ "$DNS_COUNT" == 1 ]; then
             # First, we want to query the authoritative name server for the given domain.  This way
             # we can confirm if the SOA from other servers match the authoritative.
             AUTH_NS=`dig +noall +answer +authority $DOMAIN NS | awk '{ print $5 }' ORS=' ' | awk '{ print $1 }'`
             AUTH=`dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }'`
-            if [ -z "$AUTH" ]
-            then
+            if [ -z "$AUTH" ]; then
                 echo "Unable to obtain a valid SOA from authoritative name server ${AUTH_NS}."
                 echo "Since this is the master, we have nothing to compare to."
                 exit 1
@@ -241,31 +255,29 @@ prop_check() {
         fi
         
         # If the result is empty, display a notice with the IP address of the server.
-        if [ -z "$RESULT" ]
-            then
-                RESULT="No response from server (IP: ${DNS})"
-                SOA='' # Reset so there's no match.
+        if [ -z "$RESULT" ]; then
+            ANSWER="No response from server (IP: ${DNS})"
+            SOA='' # Reset so there's no match.
         else
   			SOA=`echo $RESULT | awk '{ print $3 }'`
-        fi    		
+        fi
     	
     	# Compare the two and increment if they match.
-		if [ "$SOA" == "$AUTH" ]
-		then
+		if [ "$SOA" == "$AUTH" ]; then
             MATCH=$((MATCH+1))
-            RESULT=${LGREEN}${RESULT}${RESTORE}
-		else
-		    RESULT=${LRED}${RESULT}${RESTORE}
-		fi
+            ANSWER=${LGREEN}${SOA}${RESTORE}
+        else
+            ANSWER=${LRED}${SOA}${RESTORE}
+        fi
         
         # Print the results. Remember, FDNS_SERVER is already formatted.
         echo "DNS: ${SERVER}:"
-        echo "    $RESULT"
+        echo "    $ANSWER"
     done
     
     # Print the match results.
     echo "${LYELLOW}**** MATCH RESULTS: $MATCH OF ${DNS_COUNT} ****${RESTORE}"
-	ehco -e ""
+	echo -e ""
 }
 
 ## End FUNCTIONS
@@ -287,8 +299,7 @@ esac
 
 # If no argument is passed with the domain, we have to set $2 to something
 # for the loop to work correctly and allow stacking of commands.
-if [ -z "$2" ]
-then
+if [ -z "$2" ]; then
     # Leave $1 alone! Just set the $2 variable to the default NS
     set -- "$1" "$DEFDNS"
 fi
@@ -326,8 +337,20 @@ do
             set_dns $NIC
             default_search
             ;;
-        cf | '') # Cloudfare.
+        cf | '') # Cloudfare
             set_dns $CF
+            default_search
+            ;;
+        veri) # Verisign
+            set_dns $VERI
+            default_search
+            ;;
+        nort) # Norton ConnectSafe
+            set_dns $NORT
+            default_search
+            ;;
+        como) # Comodo Secure DNS
+            set_dns $COMO
             default_search
             ;;
         prop) # Check world DNS propagation.
@@ -374,14 +397,15 @@ do
 			set_dns $DEFDNS
 			ptr_search
 			;;
-        *) # Use the IP passed as the 2nd arg. We do validate or show usage.
-			if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
-			then
+        *) # Use the IP passed as the 2nd arg. We do validate IP, else show usage.
+			if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
 				set_dns $2
 				default_search
 			else
+				echo "Invalid IPv4 address provided."
 				usage
-				exit 1
+				exit 2
+			fi
 			;;
     esac
 done
