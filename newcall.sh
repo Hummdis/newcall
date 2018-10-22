@@ -187,7 +187,7 @@ ns_check() {
     echo "  DIG results:"
 	dig $DOMAIN NS +short | sed 's/^/    /'
 	echo "  WHOIS NS results:"
-	whois -a -d $DOMAIN | grep -i 'Name Server:' | sed 's/^/ /'
+	whois -a -d $DOMAIN | grep -i 'Name Server:' | sed 's/^/    /'
 }
 
 spf_check() {
@@ -335,7 +335,7 @@ do
             set_dns $QUAD
             default_search
             ;;
-		q9bl) #Quad9 Non-Secure
+		q9bl) # Quad9 Non-Secure
 			set_dns $Q9BL
 			default_search
 			;;
