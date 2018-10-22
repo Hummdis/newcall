@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.7
+# Version 1.6.8
 
 # VARS
 
@@ -38,15 +38,16 @@ ULINE=$(echo -en '\033[4m')         # Underline
 IMH='74.124.210.242'  # InMotion Hosting
 RES='216.194.168.112' # IMH Resellers
 GOOG='8.8.8.8'        # Google
-CF='1.1.1.1'          # Cloudflare --DEFAULT--
+CF='1.1.1.1'          # Cloudflare
 L3='209.244.0.3'      # Level3
 QUAD='9.9.9.9'        # Quad9
+Q9BL='9.9.9.10'		  # Quad9 No Security DNS --DEFAULT--
 OPEN='208.67.222.222' # OpenDNS 
 NIC='174.138.48.29'   # OpenNIC (New York)
 VERI='64.6.64.6'      # Verisign
 NORT='199.85.127.10'  # Norton ConnectSafe
 COMO='8.20.247.20' 	  # Comodo Secure DNS
-W1='84.200.69.80'     # DNS Watch
+W1='51.254.25.115'    # OpenNIC (Czech Republic)
 W2='202.53.93.10'     # Unknown (India)
 W3='197.189.228.154'  # PowerDNS (South Africa)
 W4='200.49.159.68'    # FiberTel (Argentina)
@@ -57,11 +58,11 @@ W8='31.171.251.118'   # OpenNIC (Switzerland)
 W9='51.254.25.115'    # OpenNIC (Czech Republic)
 W10='139.59.18.213'   # OpenNIC (India)
 W11='139.99.96.146'   # OpenNIC (Singapore)
-W12='111.67.20.8'     # OpenNIC (Australia)
+W12='207.148.83.241'  # OpenNIC (Australia)
 W13='5.132.191.104'   # OpenNIC (Austria)
 
 # Set the default DNS server here:
-DEFDNS="$CF"
+DEFDNS="$Q9BL"
 
 ## End VARS
 
@@ -76,10 +77,11 @@ Usage: newcall <domain> [dns | ..OPTIONS..]
 Built-In Public DNS Options include:
     imh | int: InMotion Hosting DNS Server
     res : InMotion Reseller DNS
-    cf  : Cloudflare Public DNS --DEFAULT--
+    cf  : Cloudflare Public DNS
     goog: Google Public DNS
     open: OpenDNS Public DNS
     quad: Quad9 Public DNS
+	q9bl: Quad9 Public DNS (No block access) --DEFAULT--
     l3  : Level3 Public DNS
     nic : OpenNIC Public DNS
     veri: Verisign
@@ -220,10 +222,10 @@ prop_check() {
     
 	DNS_COUNT=0
 	MATCH=0
-	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $OPEN $NIC $VERI $COMO $NORT \
+	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO $NORT \
 	           $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 $W13
     do
-        DNS_COUNT=$((DNS_COUNT+1))
+        DNS_COUNT=$((DNS_COUNT+1))	
 		set_dns $DNS
         
         # If there is not a PTR for the DNS record, for whatever reason, display the IPv4.
@@ -233,7 +235,7 @@ prop_check() {
             SERVER=$FDNS_SERVER
         fi
         
-        if [ "$DNS_COUNT" == 1 ]; then
+        if [ "$DNS_COUNT" = 1 ]; then
             # First, we want to query the authoritative name server for the given domain.  This way
             # we can confirm if the SOA from other servers match the authoritative.
             AUTH_NS=`dig +noall +answer +authority $DOMAIN NS | awk '{ print $5 }' ORS=' ' | awk '{ print $1 }'`
@@ -245,31 +247,35 @@ prop_check() {
             else
                 # We have a valid result out of the gate. Use this.
                 echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${RESTORE}"
-                RESULT=`dig @$AUTH_NS $DOMAIN SOA +short`
-                SOA=$AUTH
+                RESULT=`dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }'`
             fi
         else
             # We need the results of the query so that we can display an actual timeout message since
             # 'dig' doesn't display one for us. Also reports if nothing is returned.
-            RESULT=`dig @$DNS $DOMAIN SOA +short`
+            RESULT=`dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }'`
         fi
         
         # If the result is empty, display a notice with the IP address of the server.
-        if [ -z "$RESULT" ]; then
-            ANSWER="No response from server (IP: ${DNS})"
-            SOA='' # Reset so there's no match.
-        else
-  			SOA=`echo $RESULT | awk '{ print $3 }'`
+		# Due to potential error responses, we also want to omit any words that show up.
+		RE='^[0-9]+$'
+		if ! [[ $RESULT =~ $RE ]]; then
+        	if [ -z "$RESULT" ] || [ "$RESULT" = '' ]; then
+				SOA="No response from server (IP: ${DNS})"
+        	else
+				SOA="Invalid reponse from server (IP: ${DNS})"
+			fi
+		else
+  			SOA="$RESULT"
         fi
     	
     	# Compare the two and increment if they match.
-		if [ "$SOA" == "$AUTH" ]; then
+		if [ "$SOA" = "$AUTH" ]; then
             MATCH=$((MATCH+1))
             ANSWER=${LGREEN}${SOA}${RESTORE}
         else
             ANSWER=${LRED}${SOA}${RESTORE}
         fi
-        
+ 
         # Print the results. Remember, FDNS_SERVER is already formatted.
         echo "DNS: ${SERVER}:"
         echo "    $ANSWER"
@@ -329,6 +335,10 @@ do
             set_dns $QUAD
             default_search
             ;;
+		q9bl) #Quad9 Non-Secure
+			set_dns $Q9BL
+			default_search
+			;;
         l3) # Level3
             set_dns $L3
             default_search
