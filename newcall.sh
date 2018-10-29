@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.8
+# Version 1.6.10
 
 # VARS
 
@@ -156,7 +156,8 @@ mx_search () {
     echo "${LYELLOW}MX Records${RESTORE} for $FDOMAIN is:"
     dig @$DNS_SERVER $DOMAIN MX +short | sed 's/^/    /'
 	echo "${LYELLOW}MX Record IP${RESTORE} for $FDOMAIN is:"
-	nslookup -type=mx $DOMAIN | grep 'Server' | awk '{ print $2 }' | sed 's/^/ /'
+	host $(dig @$DNS_SERVER $DOMAIN MX +short | awk '{ print $2 }') | sed 's/^/ /'
+	# BUG: There's still a bug here for when there are more than 1 MX servers returned.
 }
 
 soa_search() {
