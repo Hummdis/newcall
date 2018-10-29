@@ -155,6 +155,8 @@ mx_search () {
     # MX information
     echo "${LYELLOW}MX Records${RESTORE} for $FDOMAIN is:"
     dig @$DNS_SERVER $DOMAIN MX +short | sed 's/^/    /'
+	echo "${LYELLOW}MX Record IP${RESTORE} for $FDOMAIN is:"
+	nslookup -type=mx $DOMAIN | grep 'Server' | awk '{ print $2 }' | sed 's/^/ /'
 }
 
 soa_search() {
