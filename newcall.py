@@ -8,4 +8,39 @@
 # Version 1.0.0 | Created 2018/10/02 | Updated: 2018/10/02
 
 # This file replaces the 'newcall.sh' script because we want to do some more
-# complex things that are, quite frankly, harder to do in BASH.  
+# complex things that are, quite frankly, harder to do in BASH.
+
+import os
+import sys
+import socket
+import dns.resolver
+
+domain = "hummdis.com"
+
+myResolver = dns.resolver.Resolver() #create a new instance named 'myResolver'
+myResolver.nameservers = ['8.8.8.8', '1.1.1.1', '9.9.9.9']
+
+try:
+    dnsA = myResolver.query(domain, "A") #Lookup the 'A' record(s)
+    for rdata in dnsA: #for each response
+        print rdata #print the data
+
+    dnsMX = myResolver.query(domain, "MX")
+    for rdata in dnsMX:
+        print rdata
+
+    dnsNS = myResolver.query(domain, "NS")
+    for rdata in dnsNS:
+        print rdata
+
+    dnsTXT = myResolver.query(domain, "TXT")
+    for rdata in dnsTXT:
+        print rdata
+    
+    dnsCNAME = myResolver.query(domain, "CNAME")
+    for rdata in dnsCNAME:
+        print rdata.target
+
+except:
+    print "Query failed."
+
