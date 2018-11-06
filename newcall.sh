@@ -450,7 +450,7 @@ do
 				set_dns $2
 				default_search
 			else
-				echo "Invalid IPv4 address provided."
+				echo "${LRED}Invalid IPv4 address provided.${RESTORE}"
 				usage
 				exit 2
 			fi
