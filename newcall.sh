@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.12
+# Version 1.6.13
 
 # VARS
 
@@ -41,7 +41,7 @@ GOOG='8.8.8.8'        # Google
 CF='1.1.1.1'          # Cloudflare
 L3='209.244.0.3'      # Level3
 QUAD='9.9.9.9'        # Quad9
-Q9BL='9.9.9.10'		  # Quad9 No Security DNS --DEFAULT--
+Q9BL='9.9.9.10'		  # Quad9 No Blocks DNS --DEFAULT--
 OPEN='208.67.222.222' # OpenDNS 
 NIC='165.227.22.116'  # OpenNIC (USA)
 VERI='64.6.64.6'      # Verisign
@@ -55,7 +55,7 @@ W5='202.46.127.227'   # CNX (Malaysia)
 W6='41.217.204.165'   # Layer3 (Nigeria)
 W7='45.71.185.100'    # OpenNIC (Ecuador)
 W8='195.154.226.236'  # OpenNIC (France)
-W9='51.254.25.115'    # OpenNIC (Czech Republic)
+W9='82.141.39.32'     # OpenNIC (Germany)
 W10='178.17.170.179'  # OpenNIC (Moldova, Republic of)
 W11='139.99.96.146'   # OpenNIC (Singapore)
 W12='207.148.83.241'  # OpenNIC (Australia)
@@ -85,7 +85,7 @@ Built-In Public DNS Options include:
 	q9bl: Quad9 Public DNS (No block access) --DEFAULT--
     l3  : Level3 Public DNS
     nic : OpenNIC Public DNS
-    veri: Verisign
+    veri: Verisign Public DNS
     nort: Norton ConnectSafe
     como: Comodo Secure DNS
     -OR- Any manually entered ${LCYAN}IP${RESTORE} for a public DNS server.
@@ -113,7 +113,7 @@ Built-In Public DNS Options include:
 
 EXAMPLES: newcall hummdis.com 
           newcall hummdis.com veri
-          newcall hummdis.com 64.6.64.6
+          newcall hummdis.com 8.8.4.4
           newcall hummdis.com ns mx spf dmarc
 "
 }
