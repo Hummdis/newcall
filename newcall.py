@@ -14,9 +14,12 @@ import os
 import sys
 import socket
 import dns.resolver
+import traceback
 
 domain = sys.argv[1]
 
+# For this matrix, the switch is 0, the IP is 1 and the formal name is 2.
+# Thus, calling the Verisign IP would appear as: servers[8][1]
 servers = [ ['imh',  '74.124.210.242',  "InMotion Hosting"],
             ['goog', '8.8.8.8',         "Google Public DNS"],
             ['cf',   '1.1.1.1',         "Cloudflare Public DNS"],
@@ -48,36 +51,81 @@ servers = [ ['imh',  '74.124.210.242',  "InMotion Hosting"],
             ['w18',  '192.99.85.244',   "OpenNIC (Canada)"],
             ['w19',  '104.238.186.189', "OpenNIC (UK Great Britain)"]
             ]
+default_nameserver = servers[5]
+
+def nssearch(opt):
+    # Search the 'servers' array for the given option.
+    for record in servers:
+        for data in record:
+            if data == opt:
+                return record
+    error = "Name Server option '%s' not found. Using default" % (opt)
+    print termcolors.RED + error + termcolors.END
+    return default_nameserver
+
+class termcolors:
+    # Formatting Vars
+    END         = '\033[0m'        # Reset to normal TTY
+    RED         = '\033[01;31m'    # Bold Red
+    GREEN       = '\033[01;32m'    # Bold Green
+    YELLOW      = '\033[01;33m'    # Bold Yellow
+    BLUE        = '\033[01;94m'    # Bold Light Blue
+    CYAN        = '\033[01;36m'    # Bold Cyan
+    MAGENTA     = '\033[01;35m'    # Bold Magenta
+    WHITE       = '\033[01;37m'    # Bold White
+    BLUEBK      = '\033[44m'       # Blue Background   
+    UNDERLINE   = '\033[4m'        # Underline
+    HEADER      = '\033[01;44;37m' #Blue Background w/ Bold White Text
 
 myResolver = dns.resolver.Resolver() #create a new instance named 'myResolver'
 
-# Set default name server to Quad9 No Blocks DNS
-myResolver.nameservers = [ servers[5][1] ]
+if len(sys.argv) < 3:
+    nsopt = default_nameserver
+else:
+    nsopt = nssearch(sys.argv[2])
 
-print "Query using Name Server: %s (%s)" % (servers[5][2], servers[5][1])
+myResolver.nameservers = [ nsopt[1] ]
+
+header = "Query using Name Server: %s (%s)" % (nsopt[1], nsopt[2])
+print termcolors.HEADER + header + termcolors.END
 
 try:
     
-    print "'A' Records for %s:" % (domain)
+    print termcolors.YELLOW + "'A' Records" + termcolors.END \
+        + " for %s:" % (domain)
     dnsA = myResolver.query(domain, "A") #Lookup the 'A' record(s)
     for rdata in dnsA: #for each response
         print "    %s" % (rdata) #print the data
+        ip = rdata
+    
+    # This is broken right now because the 'ip' var is not
+    # a sting. It must first be converted to a string to work.
+#    print termcolors.YELLOW + "PTR Records" + termcolors.END \
+#        + " for %s:" % (ip)
+#    req = '.'.join(reversed(ip.split("."))) + ".in-addr.arpa"
+#    dnsPTR = myResolver.query(req, "PTR")
+#    for ptrdata in dnsPTR:
+#        print "    %s" % (ptrdata)        
 
-    print "MX Records for %s:" % (domain)
+    print termcolors.YELLOW + "MX Records" + termcolors.END \
+        + " for %s:" % (domain)
     dnsMX = myResolver.query(domain, "MX")
     for rdata in dnsMX:
         print "    %s" % (rdata)
 
-    print "NS Records for %s:" % (domain) 
+    print termcolors.YELLOW + "NS Records" + termcolors.END \
+        + " for %s:" % (domain)
     dnsNS = myResolver.query(domain, "NS")
     for rdata in dnsNS:
         print "    %s" % (rdata)
 
-    print "TXT Records for %s:" % (domain)
+    print termcolors.YELLOW + "TXT Records" + termcolors.END \
+        + " for %s:" % (domain)
     dnsTXT = myResolver.query(domain, "TXT")
     for rdata in dnsTXT:
         print "    %s" % (rdata)
     
-except:
-    print "Query failed."
+except Exception:
+   print "Query failed."
+#    traceback.print_exc()
 
