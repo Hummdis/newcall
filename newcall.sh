@@ -48,7 +48,7 @@ VERI='64.6.64.6'      # Verisign
 NORT='199.85.127.10'  # Norton ConnectSafe
 COMO='8.20.247.20' 	  # Comodo Secure DNS
 W1='51.254.25.115'    # OpenNIC (Czech Republic)
-W2='202.53.93.10'     # NetLinx (India)
+W2 ='202.53.93.10'     # NetLinx (India)
 W3='197.189.228.154'  # PowerDNS (South Africa)
 W4='200.49.159.68'    # FiberTel (Argentina)
 W5='202.46.127.227'   # CNX (Malaysia)
@@ -106,7 +106,7 @@ Built-In Public DNS Options include:
           using the default DNS servers.    
     spf : This will run a check for SPF records.
     ptr : This will return the PTR for the given domain.
-    arin: This runs an ARIN check on the "A" record of the domain.    
+    arin: This runs an ARIN check on the 'A' record of the domain.    
    dmarc: This will run a check for DMARC records.
     spam: This will check NS, PTR, MX, SPF and DMARC for causes for
           being marked as SPAM or being blacklisted.
