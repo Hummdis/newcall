@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.13
+# Version 1.6.14
 
 # VARS
 
@@ -209,7 +209,7 @@ ns_check() {
     echo "  DIG results:"
 	dig $DOMAIN NS +short | sort -n |  sed 's/^/    /'
 	echo "  WHOIS NS results:"
-	whois -d $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print}' | \
+	whois -d $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | \
 	   sed 's/^/    /'
 }
 
