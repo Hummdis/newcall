@@ -5,7 +5,11 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
+<<<<<<< HEAD
 # Version 1.7.0
+=======
+# Version 1.6.15
+>>>>>>> master
 
 # VARS
 
@@ -37,6 +41,7 @@ ULINE=$(echo -en '\033[4m')			# Underline
 # InMotion Hosting or any other non-public DNS server, because it fails if
 # the site is not hosted with that DNS server owner.
 IMH='74.124.210.242'  # InMotion Hosting
+RES='216.194.168.112' # IMH Reseller Servers
 GOOG='8.8.8.8'        # Google
 CF='1.1.1.1'          # Cloudflare
 L3='209.244.0.3'      # Level3
@@ -255,8 +260,9 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
     
 	DNS_COUNT=0
 	MATCH=0
-	for DNS in $IMH $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO $NORT \
-	           $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 $W13 $W14
+	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO \
+			   $NORT $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 \
+			   $W13 $W14
     do
         DNS_COUNT=$((DNS_COUNT+1))	
 		set_dns $DNS
@@ -379,12 +385,12 @@ fi
 for i in "${@:2}"
 do
     case $i in
-        int | imh) # InMotion
+        int | imh) # IMH Masters
             # See note in DNS variables to know why this can't be default.
             set_dns $IMH
             default_search
 			;;
-        res) # InMotion Reseller
+        res) # IMH Reseller
             set_dns $RES
             default_search
             ;;
