@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.14
+# Version 1.7.0
 
 # VARS
 
@@ -18,16 +18,16 @@ DNS='' # Used in Loop.
 SERVER='' # Used in propagation check.
 
 # Formatting Vars
-RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
-LRED=$(echo -en '\033[01;31m')      # Bold Red
-LGREEN=$(echo -en '\033[01;32m')    # Bold Green
-LYELLOW=$(echo -en '\033[01;33m')   # Bold Yellow
-LBLUE=$(echo -en '\033[01;94m')     # Bold Light Blue
-LCYAN=$(echo -en '\033[01;36m')     # Bold Cyan
-LMAGENTA=$(echo -en '\033[01;35m')  # Bold Magenta
-WHITE=$(echo -en '\033[01;37m')     # Bold White
-BBLUE=$(echo -en '\e[44m')      	# Blue Background   
-ULINE=$(echo -en '\033[4m')         # Underline
+RESTORE=$(echo -en '\033[0m')		# Reset to normal TTY
+LRED=$(echo -en '\033[01;31m')		# Bold Red
+LGREEN=$(echo -en '\033[01;32m')		# Bold Green
+LYELLOW=$(echo -en '\033[01;33m')	# Bold Yellow
+LBLUE=$(echo -en '\033[01;94m')		# Bold Light Blue
+LCYAN=$(echo -en '\033[01;36m')		# Bold Cyan
+LMAGENTA=$(echo -en '\033[01;35m')	# Bold Magenta
+WHITE=$(echo -en '\033[01;37m')		# Bold White
+BBLUE=$(echo -en '\e[44m')      		# Blue Background   
+ULINE=$(echo -en '\033[4m')			# Underline
 
 # DNS Servers
 # Worldwide Public DNS servers.
@@ -108,6 +108,7 @@ Built-In Public DNS Options include:
     ptr : This will return the PTR for the given domain.
     arin: This runs an ARIN check on the 'A' record of the domain.    
    dmarc: This will run a check for DMARC records.
+    dkim: This will run a check for DKIM records.
     spam: This will check NS, PTR, MX, SPF and DMARC for causes for
           being marked as SPAM or being blacklisted.
 
@@ -219,6 +220,12 @@ spf_check() {
     dig @$DNS_SERVER $DOMAIN TXT | grep 'v=spf' | sed 's/^/    /'
 }
 
+dkim_check() {
+    # See if there is a DKIM record for the domain.
+    echo "${LYELLOW}DKIM${RESTORE} for ${FDOMAIN}:"
+    dig @$DNS_SERVER default._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /'
+}
+
 dmarc_check() {
     # See if there is a DMARC record for the domain.
     echo "${LYELLOW}DMARC${RESTORE} FOR ${FDOMAIN}:"
@@ -300,7 +307,7 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
                 # We have a valid result out of the gate. Use this.
                 echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS})\
  SOA Serial: ${AUTH}${RESTORE}"
-                RESULT=`dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }'`
+                RESULT=`dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }'`
             fi
         else
             # We need the results of the query so that we can display an actual
@@ -447,6 +454,10 @@ do
             set_dns $DEFDNS
             dmarc_check
             ;;
+        dkim) # Check DKIM records.
+            set_dns $DEFDNS
+            dkim_check
+            ;;
         a) # Check the "A" records only.
             set_dns $DEFDNS
             ip_search
@@ -459,6 +470,7 @@ do
             mx_search
             spf_check
             dmarc_check
+			dkim_check
             exit 0
             ;;
 		ptr) # Print the PTR results.
