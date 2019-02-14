@@ -5,11 +5,9 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-<<<<<<< HEAD
-# Version 1.7.0
-=======
-# Version 1.6.15
->>>>>>> master
+
+# Version 1.7.1
+# Last Updated: 2019-02-14
 
 # VARS
 
@@ -172,8 +170,7 @@ mx_search () {
  		dig +short -f -`
 	echo "    $IP"
 	# Report the owner of the IP address, if we can get it.
-	ARIN=`whois -d $IP | \
-		grep 'Organization' | sed 's/^/    /'`
+	ARIN=`whois -d $IP | grep -i 'netname' | sed 's/^/    /'`
 	if [ ! -z "$ARIN" ]
 	then 
 		echo "$ARIN"
@@ -204,9 +201,9 @@ whois_check() {
 	
 arin_search() {
     # This performs an ARIN check on the domain given.
-    echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN}:"
+    echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short))${RESTORE}:"
     whois -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n1) | \
-		grep 'NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
+		grep -i 'NetName|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
 }
 
 ns_check() {
@@ -468,6 +465,12 @@ do
             set_dns $DEFDNS
             ip_search
             ;;
+		ssl) # Only run checks that we care about when installing SSLs.
+			set_dns $DEFDNS
+			ip_search
+			ns_check
+			ptr_search
+			;;
         spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
             # This is NOT stackable. Only run this command.
             set_dns $DEFDNS
