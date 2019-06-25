@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Created by Jeffrey Shepherd (http://dev.hummdis.com).
 # This work is licensed under the Creative Commons Attribution-ShareAlike
@@ -22,13 +22,13 @@ SERVER='' # Used in propagation check.
 # Formatting Vars
 RESTORE=$(echo -en '\033[0m')		# Reset to normal TTY
 LRED=$(echo -en '\033[01;31m')		# Bold Red
-LGREEN=$(echo -en '\033[01;32m')		# Bold Green
+LGREEN=$(echo -en '\033[01;32m')	# Bold Green
 LYELLOW=$(echo -en '\033[01;33m')	# Bold Yellow
 LBLUE=$(echo -en '\033[01;94m')		# Bold Light Blue
 LCYAN=$(echo -en '\033[01;36m')		# Bold Cyan
 LMAGENTA=$(echo -en '\033[01;35m')	# Bold Magenta
 WHITE=$(echo -en '\033[01;37m')		# Bold White
-BBLUE=$(echo -en '\e[44m')      		# Blue Background   
+BBLUE=$(echo -en '\e[44m')      	# Blue Background   
 ULINE=$(echo -en '\033[4m')			# Underline
 
 # DNS Servers
@@ -51,7 +51,7 @@ VERI='64.6.64.6'      # Verisign
 NORT='199.85.127.10'  # Norton ConnectSafe
 COMO='8.20.247.20' 	  # Comodo Secure DNS
 W1='51.254.25.115'    # OpenNIC (Czech Republic)
-W2 ='202.53.93.10'     # NetLinx (India)
+W2 ='202.53.93.10'    # NetLinx (India)
 W3='197.189.228.154'  # PowerDNS (South Africa)
 W4='200.49.159.68'    # FiberTel (Argentina)
 W5='202.46.127.227'   # CNX (Malaysia)
