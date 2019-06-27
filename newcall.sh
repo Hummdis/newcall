@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.17
+# Version 1.6.18
 
 # VARS
 
@@ -95,37 +95,43 @@ Built-In Public DNS Options include:
 
 [OPTIONS] To be used in place of a DNS server.
 
-    prop: This will run a DNS propagation test for the SOA record
-          and display the result from each of the built-in DNS servers as well
-          as a check of additional worldwide DNS servers for full propagation.
-          This check will first obtain the SOA from the authoritative name
-		  server for the given domain, then compare it with the full list of DNS
-		  servers.
-          A summary at the end will report how many matches are found.
-          NOTE: Using the 'prop' option ${ULINE}will${RESTORE} test international
-		  servers.
-    a   : Display the 'A' record only.
-    mx  : This will run a check for MX records only using the
-          default DNS servers.
-    ns  : This will run a check of the NS records from WHOIS
-          using the default DNS servers.    
-    spf : This will run a check for SPF records.
-    ptr : This will return the PTR for the given domain.
-    arin: This runs an ARIN check on the 'A' record of the domain.    
-   dmarc: This will run a check for DMARC records.
-    dkim: This will run a check for DKIM records.
-    spam: This will check NS, PTR, MX, SPF and DMARC for causes for
-          being marked as SPAM or being blacklisted.
-	 caa: Perform a CAA check to ensure that the SSL being issued can be done
-	      by the CA that's issuing the SSL.
-     ssl: Run a setup of standard tasks for installation of SSL certificates, as
-          well as running a CAA check.
-     
+     prop: This will run a DNS propagation test for the SOA record
+           and display the result from each of the built-in DNS servers as well
+           as a check of additional worldwide DNS servers for full propagation.
+           This check will first obtain the SOA from the authoritative name
+		   server for the given domain, then compare it with the full list of
+		   DNS servers. A summary at the end will report how many matches are
+		   found.
+           NOTE: Using the 'prop' option ${ULINE}will${RESTORE} test
+		   international servers.
+     a   : Display the 'A' record only.
+     mx  : This will run a check for MX records only using the
+           default DNS servers.
+     ns  : This will run a check of the NS records from WHOIS
+           using the default DNS servers.    
+     spf : This will run a check for SPF records.
+     ptr : This will return the PTR for the given domain.
+     arin: This runs an ARIN check on the 'A' record of the domain.    
+    dmarc: This will run a check for DMARC records.
+     dkim: This will run a check for DKIM records.
+     spam: This will check NS, PTR, MX, SPF and DMARC for causes for
+           being marked as SPAM or being blacklisted.  If this argument is
+		   passed with others, this is the only one that will run.
+      caa: Perform a CAA check to ensure that the SSL being issued can be done
+	       by the CA that's issuing the SSL.
+      ssl: Run a setup of standard tasks for installation of SSL certificates,
+		   as well as running a CAA check. If this argument is passed with 
+		   others it will be the only one that runs.
+    whois: Provides and extended output of WHOIS data.  It's not the full WHOIS,
+           just additional informaiton provided over the default test.
+whoisfull: This will perform a full 'whois' lookup of the domain. If this
+		   argument is passed with others, it will be th eonly one that runs.
 
 EXAMPLES: newcall hummdis.com 
           newcall hummdis.com veri
           newcall hummdis.com 8.8.4.4
           newcall hummdis.com ns mx spf dmarc
+		  newcall hummdis.com spam
 "
 }
 
@@ -175,9 +181,8 @@ mx_search () {
     echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
     # Just get the IP for the primary MX record that's returned,
     # that is the lowest number (highest priority) returned.
-    IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | \
-		awk '{ print $2; exit }' | dig +short -f -)
-    echo "$IP"
+    dig @$DNS_SERVER $DOMAIN MX +short | sort -n | awk '{ print $2; exit }' | dig +short -f - | sed 's/^/    /'
+    #echo "$IP"
     # Report the owner of the IP address, if we can get it.
 	# There's an ARIN function. Why is this here??
     #ARIN=$(whois -d $IP | grep -i 'NetName' | sed 's/^/    /')
@@ -207,6 +212,13 @@ whois_check() {
 
 	# Provided by Jamie P.
 	whois -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Email\|Registrar' | sed 's/^/ /'
+}
+
+whois_full() {
+	echo "${LYELLOW}WHOIS Full${RESTORE} for ${FDOMAIN}:"
+	sleep 1
+	whois -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN
+	exit 0
 }
 
 arin_search() {
@@ -360,14 +372,6 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
     echo -e ""
 }
 
-ssl_check() {
-    ip_search
-    ns_check
-    ptr_search
-    arin_search
-	caa_check
-}
-
 caa_check() {
 	echo "${LYELLOW}CAA${RESTORE} FOR ${FDOMAIN}:"
     dig @$DNS_SERVER $DOMAIN CAA +short | sed 's/^/    /'
@@ -408,10 +412,12 @@ do
             default_search
             ;;
         res) # InMotion Reseller
+            # See note in DNS variables to know why this can't be default.
             set_dns $RES
             default_search
             ;;
         hub) # Web Hosting Hub
+            # See note in DNS variables to know why this can't be default.
             set_dns $HUB
             default_search
             ;;
@@ -455,10 +461,34 @@ do
             set_dns $COMO
             default_search
             ;;
+        ssl) # Only run checks that we care about when installing SSLs.
+			# This is NOT stackable. Only run these options.
+            set_dns $DEFDNS
+            ip_search
+			ns_check
+			ptr_search
+			arin_search
+			caa_check
+			exit 0
+            ;;
+        spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
+            # This is NOT stackable. Only run these options.
+            set_dns $DEFDNS
+            ns_check
+            ptr_search
+            mx_search
+            spf_check
+            dmarc_check
+            dkim_check
+            exit 0
+            ;;
+		whoisfull) # Print full WHOIS information.
+			whois_full
+			;;
+		# Options from here down can be stacked.
         prop) # Check world DNS propagation.
             prop_check
             ;;
-        # These can be stacked.
         arin) # Perform an ARIN IP check.
             set_dns $DEFDNS
             arin_search
@@ -489,21 +519,6 @@ do
             set_dns $DEFDNS
             ip_search
             ;;
-        ssl) # Only run checks that we care about when installing SSLs.
-            set_dns $DEFDNS
-            ssl_check
-            ;;
-        spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
-            # This is NOT stackable. Only run this command.
-            set_dns $DEFDNS
-            ns_check
-            ptr_search
-            mx_search
-            spf_check
-            dmarc_check
-            dkim_check
-            exit 0
-            ;;
         ptr) # Print the PTR results.
             set_dns $DEFDNS
             ptr_search
@@ -529,4 +544,3 @@ done
 # All done!
 
 exit 0
-
