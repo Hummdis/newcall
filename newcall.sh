@@ -171,11 +171,7 @@ ip_search() {
 ptr_search () {
     # Host information
     echo "${LYELLOW}PTR Record${RESTORE} record for ${FDOMAIN}:"
-<<<<<<< HEAD
     host $(dig @$DNS_SERVER $DOMAIN +short) 2>/dev/null | sed 's/^/    /'
-=======
-    host $(dig @$DNS_SERVER $DOMAIN +short) | sed 's/^/    /'
->>>>>>> parent of e364315... v1.6.19
 }
 
 mx_search () {
