@@ -171,7 +171,7 @@ ip_search() {
 ptr_search () {
     # Host information
     echo "${LYELLOW}PTR Record${RESTORE} record for ${FDOMAIN}:"
-    host $(dig @$DNS_SERVER $DOMAIN +short) | sed 's/^/    /'
+    host $(dig @$DNS_SERVER $DOMAIN +short) 2>/dev/null | sed 's/^/    /'
 }
 
 mx_search () {
