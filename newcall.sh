@@ -5,7 +5,7 @@
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-# Version 1.6.18
+# Version 1.6.19
 
 # VARS
 
@@ -298,31 +298,34 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
             # First, we want to query the authoritative name server for the 
             # given domain.  This way we can confirm if the SOA from other
             # servers match the authoritative.
-            AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
-            AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+            #AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
+            #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
             
+			AUTH_NS=$(whois -d anantajivahealingcenter.com | grep -i 'Name Server:' | awk -F ' ' '{print $3}' | awk 'NR!=2{print $1}')
+			AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+			
             # Most domains have at least two name servers. However, to prevent
             # the response from being too slow, we'll limit the check to just 
             # two servers.
             if [ -z "$AUTH" ]
             then
                 echo "${LRED}--ERROR--${RESTORE}"
-                echo "Unable to obtain a valid SOA from the first\
- authoritative name server."
+                echo "Unable to obtain a valid SOA from the first authoritative name server."
                 echo -e "    Trying next available name server...\n"
                     
-                AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $2 }')
-                AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
-                if [ -z "$AUTH" ]
+                #AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $2 }')
+                #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+
+                AUTH_NS=$(whois -d anantajivahealingcenter.com | grep -i 'Name Server:' | awk -F ' ' '{print $3}' | awk 'NR!=1{print $1}')
+				AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+				
+				if [ -z "$AUTH" ]
                 then
                     echo "${LRED}--ERROR--${RESTORE}"
-                    echo "Unable to obtain a valid SOA from the second\
-  authoritative name server."
+                    echo "Unable to obtain a valid SOA from the second authoritative name server."
                     echo -e "\n${LRED}***** QUIT *****${RESTORE}"
-                    echo "Unable to obtain a valid SOA from an authoritative\
- name server ${AUTH_NS}."
-                    echo "Since this is the reported master, we have nothing\
- to compare other SOA records to."
+                    echo "Unable to obtain a valid SOA from an authoritative name server ${AUTH_NS}."
+                    echo "Since this is the reported master, we have nothing to compare other SOA records to."
                     exit 1
                 fi
             else
