@@ -301,7 +301,7 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
             #AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
             #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
             
-			AUTH_NS=$(whois -d anantajivahealingcenter.com | grep -i 'Name Server:' | awk -F ' ' '{print $3}' | awk 'NR!=2{print $1}')
+			AUTH_NS=$(whois -d $DOMAIN | grep -i 'Name Server:' | awk '{print $3}' | awk 'NR!=2{print $1}')
 			AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
 			
             # Most domains have at least two name servers. However, to prevent
@@ -316,7 +316,7 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
                 #AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $2 }')
                 #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
 
-                AUTH_NS=$(whois -d anantajivahealingcenter.com | grep -i 'Name Server:' | awk -F ' ' '{print $3}' | awk 'NR!=1{print $1}')
+                AUTH_NS=$(whois -d $DOMAIN | grep -i 'Name Server:' | awk '{print $3}' | awk 'NR!=1{print $1}')
 				AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
 				
 				if [ -z "$AUTH" ]
@@ -325,13 +325,12 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
                     echo "Unable to obtain a valid SOA from the second authoritative name server."
                     echo -e "\n${LRED}***** QUIT *****${RESTORE}"
                     echo "Unable to obtain a valid SOA from an authoritative name server ${AUTH_NS}."
-                    echo "Since this is the reported master, we have nothing to compare other SOA records to."
+                    echo "Since these are the reported masters, we have nothing to compare other SOA records to."
                     exit 1
                 fi
             else
                 # We have a valid result out of the gate. Use this.
-                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS})\
- SOA Serial: ${AUTH}${RESTORE}"
+                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${RESTORE}"
                 RESULT=$(dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }')
             fi
         else
