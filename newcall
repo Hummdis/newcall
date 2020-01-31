@@ -1,15 +1,26 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# Created by Jeffrey Shepherd (http://dev.hummdis.com).
+# Created by Jeffrey Shepherd (https://hummdis.com).
 # This work is licensed under the Creative Commons Attribution-ShareAlike
 # 4.0 International License. To view a copy of this license,
 # visit http://creativecommons.org/licenses/by-sa/4.0/.
 
-
-# Version 1.7.1
-# Last Updated: 2019-02-14
-
 # VARS
+
+# To be implemented with a version check in the future.
+VERSION=1.7.3
+
+# Formatting Vars
+RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
+LRED=$(echo -en '\033[01;31m')      # Bold Red
+LGREEN=$(echo -en '\033[01;32m')    # Bold Green
+LYELLOW=$(echo -en '\033[01;33m')   # Bold Yellow
+LBLUE=$(echo -en '\033[01;94m')     # Bold Light Blue
+LCYAN=$(echo -en '\033[01;36m')     # Bold Cyan
+LMAGENTA=$(echo -en '\033[01;35m')  # Bold Magenta
+WHITE=$(echo -en '\033[01;37m')     # Bold White
+BBLUE=$(echo -en '\e[44m')          # Blue Background   
+ULINE=$(echo -en '\033[4m')         # Underline
 
 # These are just place holders. They may be set/reset elsewhere.
 DOMAIN=$1
@@ -19,18 +30,6 @@ FDNS_SERVER='' # Formatted DNS server.
 DNS='' # Used in Loop.  
 SERVER='' # Used in propagation check.
 
-# Formatting Vars
-RESTORE=$(echo -en '\033[0m')		# Reset to normal TTY
-LRED=$(echo -en '\033[01;31m')		# Bold Red
-LGREEN=$(echo -en '\033[01;32m')	# Bold Green
-LYELLOW=$(echo -en '\033[01;33m')	# Bold Yellow
-LBLUE=$(echo -en '\033[01;94m')		# Bold Light Blue
-LCYAN=$(echo -en '\033[01;36m')		# Bold Cyan
-LMAGENTA=$(echo -en '\033[01;35m')	# Bold Magenta
-WHITE=$(echo -en '\033[01;37m')		# Bold White
-BBLUE=$(echo -en '\e[44m')      	# Blue Background   
-ULINE=$(echo -en '\033[4m')			# Underline
-
 # DNS Servers
 # Worldwide Public DNS servers.
 # Worldwide servers only used for DNS propagation checking. Using the var
@@ -39,32 +38,34 @@ ULINE=$(echo -en '\033[4m')			# Underline
 # InMotion Hosting or any other non-public DNS server, because it fails if
 # the site is not hosted with that DNS server owner.
 IMH='74.124.210.242'  # InMotion Hosting
-RES='216.194.168.112' # IMH Reseller Servers
-GOOG='8.8.8.8'        # Google
-CF='1.1.1.1'          # Cloudflare
-L3='209.244.0.3'      # Level3
-QUAD='9.9.9.9'        # Quad9
-Q9BL='9.9.9.10'		  # Quad9 No Blocks DNS --DEFAULT--
-OPEN='208.67.222.222' # OpenDNS 
-NIC='165.227.22.116'  # OpenNIC (USA)
-VERI='64.6.64.6'      # Verisign
-NORT='199.85.127.10'  # Norton ConnectSafe
-COMO='8.20.247.20' 	  # Comodo Secure DNS
+RES='216.194.168.112' # IMH Reseller DNS Servers
+HUB='173.205.127.4'   # Web Hosting Hub DNS
+GOOG='8.8.8.8'        # Google Public DNS
+CF='1.1.1.1'          # Cloudflare Public DNS
+L3='209.244.0.3'      # Level3 DNS
+QUAD='9.9.9.9'        # Quad9 DNS
+Q9BL='9.9.9.10'       # Quad9 No Blocks DNS --DEFAULT--
+OPEN='208.67.222.222' # OpenDNS (Oracle)
+NIC='172.98.193.42'  # OpenNIC (USA)
+VERI='64.6.64.6'      # Verisign DNS
+NORT='199.85.127.10'  # Norton ConnectSafe DNS
+COMO='8.20.247.20'    # Comodo Secure DNS
 W1='51.254.25.115'    # OpenNIC (Czech Republic)
-W2 ='202.53.93.10'    # NetLinx (India)
-W3='197.189.228.154'  # PowerDNS (South Africa)
-W4='200.49.159.68'    # FiberTel (Argentina)
+W2='202.53.93.10'     # NetLinx (India)
+W3='41.57.125.214'    # Zarnet (Zimbabwe)
+W4='190.111.246.169'  # CPS (Argentina)
 W5='202.46.127.227'   # CNX (Malaysia)
 W6='41.217.204.165'   # Layer3 (Nigeria)
 W7='45.71.185.100'    # OpenNIC (Ecuador)
-W8='195.154.226.236'  # OpenNIC (France)
+W8='87.98.175.85'     # OpenNIC (France)
 W9='82.141.39.32'     # OpenNIC (Germany)
-W10='178.17.170.179'  # OpenNIC (Moldova, Republic of)
+W10='108.61.161.119'  # OpenNIC (Japan)
 W11='139.99.96.146'   # OpenNIC (Singapore)
 W12='207.148.83.241'  # OpenNIC (Australia)
 W13='5.132.191.104'   # OpenNIC (Austria)
 W14='172.98.193.42'   # OpenNIC (BackplaneDNS)
-
+W15='58.27.149.60'    # OpenNIC (Pakistan)
+W16='91.217.137.37'   # OpenNIC (Russia)
 # Set the default DNS server here:
 DEFDNS="$Q9BL"
 
@@ -81,11 +82,12 @@ Usage: newcall <domain> [dns | ..OPTIONS..]
 Built-In Public DNS Options include:
     imh | int: InMotion Hosting DNS Server
     res : InMotion Reseller DNS
+    hub : Web Hosting Hub DNS
     cf  : Cloudflare Public DNS
     goog: Google Public DNS
     open: OpenDNS Public DNS
     quad: Quad9 Public DNS
-	q9bl: Quad9 Public DNS (No block access) --DEFAULT--
+    q9bl: Quad9 Public DNS (No block access) --DEFAULT--
     l3  : Level3 Public DNS
     nic : OpenNIC Public DNS
     veri: Verisign Public DNS
@@ -95,30 +97,43 @@ Built-In Public DNS Options include:
 
 [OPTIONS] To be used in place of a DNS server.
 
-    prop: This will run a DNS propagation test for the SOA record
-          and display the result from each of the built-in DNS servers as well
-		  as a check of additional worldwide DNS servers for full propagation.
-          This check will first obtain the SOA from the authoritative name server for
-		  the given domain, then compare it with the full list of DNS servers.
-		  servers.  A summary at the end will report how many matches are found.
-      NOTE: Using the 'prop' option ${ULINE}will${RESTORE} test international servers.
-    a   : Display the 'A' record only.
-    mx  : This will run a check for MX records only using the
-          default DNS servers.
-    ns  : This will run a check of the NS records from WHOIS
-          using the default DNS servers.    
-    spf : This will run a check for SPF records.
-    ptr : This will return the PTR for the given domain.
-    arin: This runs an ARIN check on the 'A' record of the domain.    
-   dmarc: This will run a check for DMARC records.
-    dkim: This will run a check for DKIM records.
-    spam: This will check NS, PTR, MX, SPF and DMARC for causes for
-          being marked as SPAM or being blacklisted.
+     prop: This will run a DNS propagation test for the SOA record
+           and display the result from each of the built-in DNS servers as well
+           as a check of additional worldwide DNS servers for full propagation.
+           This check will first obtain the SOA from the authoritative name
+           server for the given domain, then compare it with the full list of
+           DNS servers. A summary at the end will report how many matches are
+           found.
+           NOTE: Using the 'prop' option ${ULINE}will${RESTORE} test
+           international servers.
+     a   : Display the 'A' record only.
+     mx  : This will run a check for MX records only using the
+           default DNS servers.
+     ns  : This will run a check of the NS records from WHOIS
+           using the default DNS servers.    
+     spf : This will run a check for SPF records.
+     ptr : This will return the PTR for the given domain.
+     arin: This runs an ARIN check on the 'A' record of the domain.    
+    dmarc: This will run a check for DMARC records.
+     dkim: This will run a check for DKIM records.
+     spam: This will check NS, PTR, MX, SPF and DMARC for causes for
+           being marked as SPAM or being blacklisted.  If this argument is
+           passed with others, this is the only one that will run.
+      caa: Perform a CAA check to ensure that the SSL being issued can be done
+           by the CA that's issuing the SSL.
+      ssl: Run a setup of standard tasks for installation of SSL certificates,
+           as well as running a CAA check. If this argument is passed with 
+           others it will be the only one that runs.
+    whois: Provides and extended output of WHOIS data.  It's not the full WHOIS,
+           just additional informaiton provided over the default test.
+whoisfull: This will perform a full 'whois' lookup of the domain. If this
+           argument is passed with others, it will be th eonly one that runs.
 
 EXAMPLES: newcall hummdis.com 
           newcall hummdis.com veri
           newcall hummdis.com 8.8.4.4
           newcall hummdis.com ns mx spf dmarc
+          newcall hummdis.com spam
 "
 }
 
@@ -134,17 +149,19 @@ default_search() {
     ip_search
     ns_check
     ptr_search
+    arin_search
     mx_search
     soa_search
-	
-	echo ""    
+    whois_search
+
+    echo ""    
     echo -n "${LGREEN}Checks completed for${RESTORE} $FDOMAIN ${LGREEN}on: "
         date
     # Print reminder.
-	echo "Using DNS: $FDNS_SERVER${LGREEN} ($DNS_SERVER)${RESTORE}"
-	echo ""
-	# We're done. Don't allow the default_search to be stacked.
-	exit 0
+    echo "Using DNS: $FDNS_SERVER${LGREEN} ($DNS_SERVER)${RESTORE}"
+    echo ""
+    # We're done. Don't allow the default_search to be stacked.
+    exit 0
 }
 
 ip_search() {
@@ -156,25 +173,28 @@ ip_search() {
 ptr_search () {
     # Host information
     echo "${LYELLOW}PTR Record${RESTORE} record for ${FDOMAIN}:"
-    host $(dig @$DNS_SERVER $DOMAIN +short) | sed 's/^/    /'
+    host $(dig @$DNS_SERVER $DOMAIN +short) 2>/dev/null | sed 's/^/    /'
 }
 
 mx_search () {
     # MX information
     echo "${LYELLOW}MX Records${RESTORE} for ${FDOMAIN}:"
     dig @$DNS_SERVER $DOMAIN MX +short | sort -n | sed 's/^/    /'
-	echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
-	# Just get the IP for the primary MX record that's returned,
-	# that is the lowest number (highest priority) returned.
-	IP=`dig @$DNS_SERVER $DOMAIN MX +short | sort -n | awk '{ print $2; exit }' | \
- 		dig +short -f -`
-	echo "    $IP"
-	# Report the owner of the IP address, if we can get it.
-	ARIN=`whois -d $IP | grep -i 'netname' | sed 's/^/    /'`
-	if [ ! -z "$ARIN" ]
-	then 
-		echo "$ARIN"
-	fi
+    echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
+    # Just get the IP for the primary MX record that's returned,
+    # that is the lowest number (highest priority) returned.
+    IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | awk '{ print $2; exit }' | dig +short -f -)
+    if [ ! -z "$IP" ]; then
+        echo "    $IP"
+    fi
+    # Report the owner of the first MX record IP address, if we can get it.
+    # This way, we know who hosts the email if it can't be identified by the MX record itself.
+    NETNAME=$(whois -d $IP | grep -i 'NetName' | sed 's/^/    /')
+    if [ ! -z "$NETNAME" ]; then 
+        echo "$NETNAME"
+    fi
+    # Also report the PTR, just in case.
+    dig -x $IP +short 2>/dev/null | sed 's/^/    /'
 }
 
 soa_search() {
@@ -183,37 +203,78 @@ soa_search() {
     dig @$DNS_SERVER $DOMAIN SOA +short | sed 's/^/    /'
 }
 
+tldwhois() {
+    # Determines the correct WHOIS lookup based on the TLD of the domain. This increases the reply success rate.
+    serv=$(whois -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
+    echo $serv | if grep -iq 'Unable to connect'; then
+        whois --host=$(whois --host=whois.iana.org $1 | grep -i 'refer:' | cut -d' ' -f9) $1
+    else
+        echo "$serv"
+    fi
+}
+
 whois_search() {
-    # WHOIS information
+    # WHOIS information - Quick Look
     echo "${LYELLOW}WHOIS${RESTORE} for ${FDOMAIN}:"
-    whois -d $DOMAIN | \
-		grep 'Date:\|Expir\|Status:\|Registrar:' | \
-		sed 's/^/ /'
+    
+    # Provided by Jamie P.
+    WSERV=$(whois -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
+    echo $WSERV | if grep -iq 'Unable to connect'; then
+        whois --host=$(whois --host=whois.iana.org $1 | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i 'Date:\|Status:\|Registrar:' | sed 's/^/    /'
+    else
+        echo "$WSERV" | grep -i 'Date:\|Status:\|Registrar:' | sed 's/^/    /'
+    fi
+    tucows_check
 }
 
 whois_check() {
-    # This check will provide more details than the default WHOIS search.
+    # WHOIS information - Expanded Look
     echo "${LYELLOW}WHOIS Expanded${RESTORE} for ${FDOMAIN}:"
-    whois -d $DOMAIN | \
-		grep 'Date:\|Expir\|Server:\|Status:\|DNSSEC:\|Email:\|Registrar:' | \
-		sed 's/^/ /'
+
+    # Provided by Jamie P.
+    whois -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Email\|Registrar' | sed 's/^/    /'
+    tucows_check
 }
-	
+
+whois_full() {
+    # WHOIS information - Full Look
+    echo "${LYELLOW}WHOIS Full${RESTORE} for ${FDOMAIN}:"
+    sleep 1
+    whois -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN
+    tucows_check    
+    # We're done. Don't allow 'whois_full' to be stacked.
+    exit 0
+}
+
+tucows_check() {
+    # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
+    echo "${LYELLOW}Tucows Registrar Check for${RESTORE} ${FDOMAIN}:"
+    ISUS=$(whois -h whois.tucows.com ${DOMAIN} | grep -i reseller)
+    if [[ $ISUS = *"InMotion Hosting"* ]]; then
+        echo "${LGREEN}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
+    elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
+        echo "${LGREEN}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
+    else
+        echo "${LRED}Not Registered Here${RESTORE} - Must contact ${ISUS}" | sed 's/^/    /'
+    fi
+}
+
 arin_search() {
     # This performs an ARIN check on the domain given.
     echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short))${RESTORE}:"
-    whois -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n1) | \
-		grep -i 'NetName|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
+    #IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | \
+    #   awk '{ print $2; exit }' | dig +short -f -)
+    #echo "$IP"
+    whois -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n1) | grep -i 'NetName|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
 }
 
 ns_check() {
     # This performs the NS check for a given domain.
     echo "${LYELLOW}Name Servers${RESTORE} for ${FDOMAIN}:"
     echo "  DIG results:"
-	dig $DOMAIN NS +short | sort -n |  sed 's/^/    /'
-	echo "  WHOIS NS results:"
-	whois -d $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | \
-	   sed 's/^/    /'
+    dig $DOMAIN NS +short | sort -n |  sed 's/^/    /'
+    echo "  WHOIS NS results:"
+    whois -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | sed 's/^/    /'
 }
 
 spf_check() {
@@ -230,7 +291,7 @@ dkim_check() {
 
 dmarc_check() {
     # See if there is a DMARC record for the domain.
-    echo "${LYELLOW}DMARC${RESTORE} FOR ${FDOMAIN}:"
+    echo "${LYELLOW}DMARC${RESTORE} for ${FDOMAIN}:"
     dig @$DNS_SERVER _dmarc.$DOMAIN TXT | grep 'v=' | sed 's/^/    /'
 }
 
@@ -239,9 +300,8 @@ set_dns() {
     # It also allows for the loop to work more effectively.
     # Note: $1 in this case is the server passed to this function!
     DNS_SERVER=$1
-    REV=`dig -x $DNS_SERVER +short`
-    if [ -z "$REV" ]
-	then
+    REV=$(dig -x $DNS_SERVER +short)
+    if [ -z "$REV" ]; then
         FDNS_SERVER=${WHITE}${1}${RESTORE}
     else
         FDNS_SERVER=${WHITE}${REV}${RESTORE}
@@ -252,91 +312,81 @@ prop_check() {
     # This is the DNS propagation check for the given domain. We'll check all
     # of the DNS servers we know, including some not used unless this is run.
     clear # Clear the screen before we perform this test.
-    echo -e "${LYELLOW}***** WORLDWIDE DNS PROPAGATION CHECK FOR:\
-${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
+    echo -e "${LYELLOW}***** WORLDWIDE DNS PROPAGATION CHECK FOR:${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
     
-	DNS_COUNT=0
-	MATCH=0
-	for DNS in $IMH $RES $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO \
-			   $NORT $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 \
-			   $W13 $W14
+    DNS_COUNT=0
+    MATCH=0
+    for DNS in $IMH $HUB $RES $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO $NORT $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 $W13 $W14 $W15 $W16
     do
-        DNS_COUNT=$((DNS_COUNT+1))	
-		set_dns $DNS
+        DNS_COUNT=$((DNS_COUNT+1))  
+        set_dns $DNS
         
         # If there is not a PTR for the DNS record, display the IPv4.
-        if [ -z "$FDNS_SERVER" ]
-		then
+        if [ -z "$FDNS_SERVER" ]; then
             SERVER=${LCYAN}${DNS}${RESTORE}
         else # Display the PTR as given to us.
             SERVER=$FDNS_SERVER
         fi
         
-        if [ "$DNS_COUNT" = 1 ]
-		then
+        if [ "$DNS_COUNT" = 1 ]; then
             # First, we want to query the authoritative name server for the 
-			# given domain.  This way we can confirm if the SOA from other
-			# servers match the authoritative.
-            AUTH_NS=`dig +noall +answer +authority +short $DOMAIN NS | \
-                awk '{ print $1 }' ORS=' ' | awk '{ print $1 }'`
-            AUTH=`dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }'`
+            # given domain.  This way we can confirm if the SOA from other
+            # servers match the authoritative.
+            AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
+            AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+            
+            #AUTH_NS=$(whois -d $DOMAIN | grep -i 'Name Server:' | awk '{print $3}' | awk 'NR!=2{print $1}')
+            #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
             
             # Most domains have at least two name servers. However, to prevent
             # the response from being too slow, we'll limit the check to just 
             # two servers.
-            if [ -z "$AUTH" ]
-            then
+            if [ -z "$AUTH" ]; then
                 echo "${LRED}--ERROR--${RESTORE}"
-                echo "Unable to obtain a valid SOA from the first\
- authoritative name server."
+                echo "Unable to obtain a valid SOA from the first authoritative name server."
                 echo -e "    Trying next available name server...\n"
                     
-                AUTH_NS=`dig +noall +answer +authority +short $DOMAIN NS | \
-                    awk '{ print $1 }' ORS=' ' | awk '{ print $2 }'`
-                AUTH=`dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }'`
-                if [ -z "$AUTH" ]
-                then
+                AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $2 }')
+                AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+
+                #AUTH_NS=$(whois -d $DOMAIN | grep -i 'Name Server:' | awk '{print $3}' | awk 'NR!=1{print $1}')
+                #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
+                
+                if [ -z "$AUTH" ]; then
                     echo "${LRED}--ERROR--${RESTORE}"
-                    echo "Unable to obtain a valid SOA from the second\
-  authoritative name server."
+                    echo "Unable to obtain a valid SOA from the second authoritative name server."
                     echo -e "\n${LRED}***** QUIT *****${RESTORE}"
-                    echo "Unable to obtain a valid SOA from an authoritative\
- name server ${AUTH_NS}."
-                    echo "Since this is the reported master, we have nothing\
- to compare other SOA records to."
+                    echo "Unable to obtain a valid SOA from an authoritative name server ${AUTH_NS}."
+                    echo "Since these are the reported masters, we have nothing to compare other SOA records to."
                     exit 1
                 fi
             else
                 # We have a valid result out of the gate. Use this.
-                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS})\
- SOA Serial: ${AUTH}${RESTORE}"
-                RESULT=`dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }'`
+                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${RESTORE}"
+                RESULT=$(dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }')
             fi
         else
             # We need the results of the query so that we can display an actual
-			# timeout message since 'dig' doesn't display one for us. Also 
-			# reports if nothing is returned.
-            RESULT=`dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }'`
+            # timeout message since 'dig' doesn't display one for us. Also 
+            # reports if nothing is returned.
+            RESULT=$(dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }')
         fi
         
         # If the result is empty, display a notice with the IP address.
-		# Due to potential error responses, omit any words that show up.
-		RE='^[0-9]+$'
-		if ! [[ $RESULT =~ $RE ]]
-		then
-        	if [ -z "$RESULT" ] || [ "$RESULT" = '' ]
-			then
-				SOA="No response from server (IP: ${DNS})"
-        	else
-				SOA="Invalid response from server (IP: ${DNS})"
-			fi
-		else
-  			SOA="$RESULT"
+        # Due to potential error responses, omit any words that show up.
+        RE='^[0-9]+$'
+        if ! [[ $RESULT =~ $RE ]]; then
+            if [ -z "$RESULT" ] || [ "$RESULT" = '' ]; then
+                SOA="No response from server (IP: ${DNS})"
+            else
+                SOA="Invalid response from server (IP: ${DNS})"
+            fi
+        else
+            SOA="$RESULT"
         fi
-    	
-    	# Compare the two and increment if they match.
-		if [ "$SOA" = "$AUTH" ]
-		then
+        
+        # Compare the two and increment if they match.
+        if [ "$SOA" = "$AUTH" ]; then
             MATCH=$((MATCH+1))
             ANSWER=${LGREEN}${SOA}${RESTORE}
         else
@@ -350,7 +400,12 @@ ${RESTORE} $FDOMAIN ${LYELLOW}*****${RESTORE}"
     
     # Print the match results.
     echo "${LYELLOW}**** MATCH RESULTS: $MATCH OF ${DNS_COUNT} ****${RESTORE}"
-	echo -e ""
+    echo -e ""
+}
+
+caa_check() {
+    echo "${LYELLOW}CAA${RESTORE} FOR ${FDOMAIN}:"
+    dig @$DNS_SERVER $DOMAIN CAA +short | sed 's/^/    /'
 }
 
 ## End FUNCTIONS
@@ -362,7 +417,7 @@ case $1 in
         usage
         exit 1
         ;;
-    *)  # We have something! Then set the variables.
+    *) # We have something! Then set the variables.
         # We're trusting the user gave a valid TLD. If not, the results will
         # show that it's invalid.
         DOMAIN=$1
@@ -372,8 +427,7 @@ esac
 
 # If no argument is passed with the domain, we have to set $2 to something
 # for the loop to work correctly and allow stacking of commands.
-if [ -z "$2" ]
-then
+if [ -z "$2" ]; then
     # Leave $1 alone! Just set the $2 variable to the default NS
     set -- "$1" "$DEFDNS"
 fi
@@ -382,13 +436,19 @@ fi
 for i in "${@:2}"
 do
     case $i in
-        int | imh) # IMH Masters
+        int | imh) # InMotion
             # See note in DNS variables to know why this can't be default.
             set_dns $IMH
             default_search
-			;;
-        res) # IMH Reseller
+            ;;
+        res) # InMotion Reseller
+            # See note in DNS variables to know why this can't be default.
             set_dns $RES
+            default_search
+            ;;
+        hub) # Web Hosting Hub
+            # See note in DNS variables to know why this can't be default.
+            set_dns $HUB
             default_search
             ;;
         goog) # Google
@@ -398,15 +458,15 @@ do
         open) # OpenDNS
             set_dns $OPEN
             default_search
-			;;
+            ;;
         quad) # Quad9
             set_dns $QUAD
             default_search
             ;;
-		q9bl) # Quad9 Non-Secure
-			set_dns $Q9BL
-			default_search
-			;;
+        q9bl) # Quad9 Non-Secure
+            set_dns $Q9BL
+            default_search
+            ;;
         l3) # Level3
             set_dns $L3
             default_search
@@ -431,10 +491,34 @@ do
             set_dns $COMO
             default_search
             ;;
+        ssl) # Only run checks that we care about when installing SSLs.
+            # This is NOT stackable. Only run these options.
+            set_dns $DEFDNS
+            ip_search
+            ns_check
+            ptr_search
+            arin_search
+            caa_check
+            exit 0
+            ;;
+        spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
+            # This is NOT stackable. Only run these options.
+            set_dns $DEFDNS
+            ns_check
+            ptr_search
+            mx_search
+            spf_check
+            dmarc_check
+            dkim_check
+            exit 0
+            ;;
+        whoisfull) # Print full WHOIS information.
+            whois_full
+            ;;
+        # Options from here down can be stacked.
         prop) # Check world DNS propagation.
             prop_check
             ;;
-		# These can be stacked.
         arin) # Perform an ARIN IP check.
             set_dns $DEFDNS
             arin_search
@@ -465,38 +549,33 @@ do
             set_dns $DEFDNS
             ip_search
             ;;
-		ssl) # Only run checks that we care about when installing SSLs.
-			set_dns $DEFDNS
-			ip_search
-			ns_check
-			ptr_search
-			;;
-        spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
-            # This is NOT stackable. Only run this command.
+        ptr) # Print the PTR results.
             set_dns $DEFDNS
-            ns_check
             ptr_search
-            mx_search
-            spf_check
-            dmarc_check
-			dkim_check
+            ;;
+        caa) # Run a CAA check.
+            set_dns $DEFDNS
+            caa_check
+            ;;
+        help | -h | --help) # Display help text
+            usage
             exit 0
             ;;
-		ptr) # Print the PTR results.
-			set_dns $DEFDNS
-			ptr_search
-			;;
+        version | -v | --help) # Display version information
+            echo "Newcall"
+            echo "Version: ${VERSION}"
+            exit 0
+            ;;
         *) # Use the IP passed as the 2nd arg. Validate IP, else show usage.
-			if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
-			then
-				set_dns $2
-				default_search
-			else
-				echo "${LRED}Invalid IPv4 address provided.${RESTORE}"
-				usage
-				exit 2
-			fi
-			;;
+            if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+                set_dns $2
+                default_search
+            else
+                echo "${LRED}Invalid IPv4 address provided.${RESTORE}"
+                usage
+                exit 2
+            fi
+            ;;
     esac
 done
 
