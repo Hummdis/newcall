@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.7.6
+VERSION=1.7.7
 
 RUN_PATH=~/bin
 
@@ -60,9 +60,9 @@ W5='202.46.127.227'   # CNX (Malaysia)
 W6='41.217.204.165'   # Layer3 (Nigeria)
 W7='45.71.185.100'    # OpenNIC (Ecuador)
 W8='87.98.175.85'     # OpenNIC (France)
-W9='82.141.39.32'     # OpenNIC (Germany)
-W10='108.61.161.119'  # OpenNIC (Japan)
-W11='139.99.96.146'   # OpenNIC (Singapore)
+W9='51.89.88.66'     # OpenNIC (Germany)
+W10='172.105.220.183'  # OpenNIC (Japan)
+W11='206.189.155.220'   # OpenNIC (Singapore)
 W12='207.148.83.241'  # OpenNIC (Australia)
 W13='5.132.191.104'   # OpenNIC (Austria)
 W14='172.98.193.42'   # OpenNIC (BackplaneDNS)
@@ -261,6 +261,7 @@ whois_full() {
 
 tucows_check() {
     # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
+	# Updated Regex code per Nick P.
     echo "${LYELLOW}Tucows Registrar Check for${RESTORE} ${FDOMAIN}:"
     ISUS=$(whois -h whois.tucows.com ${DOMAIN} | grep 'InMotion Hosting\|Web Hosting Hub')
     if [[ $ISUS = *"InMotion Hosting"* ]]; then
@@ -268,11 +269,11 @@ tucows_check() {
     elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
         echo "${LGREEN}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
     else
-        echo "${LRED}Not Registered Here${RESTORE} - Must contact ${ISUS}" | sed 's/^/    /'
+        echo "${LRED}Not Registered Here${RESTORE} - Must contact$(whois ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
     fi
 }
 
-arin_search() {
+arin_search() {+
     # This performs an ARIN check on the domain given.
     echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short))${RESTORE}:"
     #IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | \
