@@ -8,7 +8,9 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.7.4
+VERSION=1.7.5
+
+RUN_PATH=~/bin
 
 # Formatting Vars
 RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
@@ -418,18 +420,87 @@ caa_check() {
     dig @$DNS_SERVER $DOMAIN CAA +short | sed 's/^/    /'
 }
 
+# Check for updates to Newcall
+version_compare() {
+    # This will return the following numbers for the two arguments passed.
+    # 0 if $1 = $2
+    # 1 if $1 > $2
+    # 2 if $1 < $2
+
+    if [[ $1 == $2 ]]; then
+        return 0
+    fi
+
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # Fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
+        ver1[i]=0
+    done
+
+    for ((i=0; i<${#ver1[@]}; i++)); do
+        if [[ -z ${ver2[i]} ]]; then
+            # Fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+
+        if ((10#${ver1[i]} > 10#${ver2[i]})); then
+            return 1
+        fi
+
+        if ((10#${ver1[i]} < 10#${ver2[i]})); then
+            return 2
+        fi
+    done
+
+    return 0
+}
+
+update_check() {
+	# Perform update check.
+	wget -O /tmp/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
+	NEW_VER=$(cat /tmp/newcall | grep -m 1 "VERSION=" | cut -d = -f 2)
+    version_compare ${NEW_VER} ${VERSION}
+    case $? in
+        0)  # No update available. Do nothing.
+            ;;
+        1)  # Report a new version
+                echo "Update Check - Newcall v${NEW_VER} available!"
+            ;;
+        2)  # The public version is older than the current version.
+            echo "Update Check - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
+            ;;
+        *)  # All other values are invalid. Report, but don't cause the program to abort.
+            echo "Update Check - Newcall Update Check returned an invalid code ($?)."
+            ;;
+    esac
+}
+
+update() {
+	echo "Performing Newcall update...."
+	wget -O ${RUN_PATH}/newcall https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
+	chmod +x ${RUN_PATH}/newcall
+	echo "Update Complete."
+	exit 0
+}
+
 ## End FUNCTIONS
 
 # Main portion. Process the arguments and perform checks.
 # Make sure we got a domain provided. If not, display usage and exit.
 case $1 in
     '' | -h | --help) # Nothing | -h | --help passed.
+		update_check
         usage
         exit 1
         ;;
+	update) # Run Update.
+		update
+		;;
     *) # We have something! Then set the variables.
         # We're trusting the user gave a valid TLD. If not, the results will
         # show that it's invalid.
+		update_check
         DOMAIN=$1
         FDOMAIN=${LCYAN}${1}${RESTORE}
         ;;
