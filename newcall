@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.7.5
+VERSION=1.7.6
 
 RUN_PATH=~/bin
 
@@ -465,13 +465,14 @@ update_check() {
         0)  # No update available. Do nothing.
             ;;
         1)  # Report a new version
-                echo "Update Check - Newcall v${NEW_VER} available!"
+                echo "${LMAGENTA}Update Check${RESTORE} - Newcall ${LRED}v${NEW_VER} available!${RESTORE}"
+				sleep 2
             ;;
         2)  # The public version is older than the current version.
-            echo "Update Check - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
+            echo "${LMAGENTA}Update Check${RESTORE} - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
             ;;
         *)  # All other values are invalid. Report, but don't cause the program to abort.
-            echo "Update Check - Newcall Update Check returned an invalid code ($?)."
+            echo "${LMAGENTA}Update Check${RESTORE} - Newcall Update Check returned an invalid code ($?)."
             ;;
     esac
 }
@@ -490,7 +491,6 @@ update() {
 # Make sure we got a domain provided. If not, display usage and exit.
 case $1 in
     '' | -h | --help) # Nothing | -h | --help passed.
-		update_check
         usage
         exit 1
         ;;
@@ -500,7 +500,6 @@ case $1 in
     *) # We have something! Then set the variables.
         # We're trusting the user gave a valid TLD. If not, the results will
         # show that it's invalid.
-		update_check
         DOMAIN=$1
         FDOMAIN=${LCYAN}${1}${RESTORE}
         ;;
@@ -512,6 +511,9 @@ if [ -z "$2" ]; then
     # Leave $1 alone! Just set the $2 variable to the default NS
     set -- "$1" "$DEFDNS"
 fi
+
+# Always perform update check.
+update_check
 
 # Loop through each of the passed arguments starting at the second one.
 for i in "${@:2}"
