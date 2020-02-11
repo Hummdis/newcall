@@ -5,7 +5,7 @@
 1. Login to JumpStation.
 2. Run the following command:
 
-    mkdir -p ~/bin; wget -O ~/bin/newcall https://gitlab.imh-support.com/jeffsh/newcall/raw/master/newcall; chmod +x ~/bin/newcall
+    mkdir -p ~/bin; wget -O ~/bin/newcall https://raw.githubusercontent.com/Hummdis/newcall/master/newcall; chmod +x ~/bin/newcall
 
 3. You're all set. You can now being using `newcall domain.com` to perform DNS lookups.
 
