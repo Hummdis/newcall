@@ -516,6 +516,7 @@ fi
 
 # Always perform update check.
 update_check
+sleep 2
 
 # Loop through each of the passed arguments starting at the second one.
 for i in "${@:2}"
