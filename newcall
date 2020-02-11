@@ -273,7 +273,7 @@ tucows_check() {
     fi
 }
 
-arin_search() {+
+arin_search() {
     # This performs an ARIN check on the domain given.
     echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short))${RESTORE}:"
     #IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | \
