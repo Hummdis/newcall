@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.7.8
+VERSION=1.7.9
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)/
@@ -461,24 +461,38 @@ version_compare() {
 
 update_check() {
 	# Perform update check.
-	mkdir -p ${TEMP_DIR}
-	wget -O ${TEMP_DIR}/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
-	NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f 2)
-    version_compare ${NEW_VER} ${VERSION}
-    case $? in
-        0)  # No update available. Do nothing.
-            ;;
-        1)  # Report a new version
-                echo "${LMAGENTA}Update Check${RESTORE} - Newcall ${LRED}v${NEW_VER} available!${RESTORE}"
+	# Bug. Credit Nick L. -- The JS /tmp dir doesn't allow the file to be read by others. Correcting to make a folder under /tmp owned by the user to then
+	# put the file into that folder, thus removing the permission denied messages.
+	if [[ ! -e $TEMP_DIR ]]; then
+		mkdir -p ${TEMP_DIR}
+	elif [[ ! -d $TEMP_DIR ]]; then
+		echo "The temporary directory is a file, not a directory. Failed update check."
+		sleep 3
+	fi
+	
+	# Only download the file every 6 hours to reduce the number of times this is done.
+	if test `find ${TEMP_DIR}/newcall -mmin +360`
+	then
+		rm -f ${TEMP_DIR}/newcall
+		wget -O ${TEMP_DIR}/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
+	fi
+	# Use the existing file to check.
+	NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f )
+	version_compare ${NEW_VER} ${VERSION}
+	case $? in
+		0)  # No update available. Do nothing.
+			;;
+		1)  # Report a new version
+				echo "${LMAGENTA}Update Check${RESTORE} - Newcall ${LRED}v${NEW_VER} available!${RESTORE}"
 				sleep 2
-            ;;
-        2)  # The public version is older than the current version.
-            echo "${LMAGENTA}Update Check${RESTORE} - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
-            ;;
-        *)  # All other values are invalid. Report, but don't cause the program to abort.
-            echo "${LMAGENTA}Update Check${RESTORE} - Newcall Update Check returned an invalid code ($?)."
-            ;;
-    esac
+			;;
+		2)  # The public version is older than the current version.
+			echo "${LMAGENTA}Update Check${RESTORE} - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
+			;;
+		*)  # All other values are invalid. Report, but don't cause the program to abort.
+			echo "${LMAGENTA}Update Check${RESTORE} - Newcall Update Check returned an invalid code ($?)."
+			;;
+	esac
 }
 
 update() {
