@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.7.9
+VERSION=1.8.0
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)/
@@ -83,19 +83,19 @@ Usage: newcall <domain> [dns | ..OPTIONS..]
 
 [dns]    - (Optional) The DNS server to be used.
 Built-In Public DNS Options include:
-    imh | int: InMotion Hosting DNS Server
-    res : InMotion Reseller DNS
-    hub : Web Hosting Hub DNS
-    cf  : Cloudflare Public DNS
-    goog: Google Public DNS
-    open: OpenDNS Public DNS
-    quad: Quad9 Public DNS
-    q9bl: Quad9 Public DNS (No block access) --DEFAULT--
-    l3  : Level3 Public DNS
-    nic : OpenNIC Public DNS
-    veri: Verisign Public DNS
-    nort: Norton ConnectSafe
-    como: Comodo Secure DNS
+    imh | int	: InMotion Hosting DNS Server
+    res			: InMotion Reseller DNS
+    hub			: Web Hosting Hub DNS
+    cf				: Cloudflare Public DNS
+    goog			: Google Public DNS
+    open			: OpenDNS Public DNS
+    quad			: Quad9 Public DNS
+    q9bl			: Quad9 Public DNS (No block access) --DEFAULT--
+    l3				: Level3 Public DNS
+    nic			: OpenNIC Public DNS
+    veri			: Verisign Public DNS
+    nort			: Norton ConnectSafe
+    como		: Comodo Secure DNS
     -OR- Any manually entered ${LCYAN}IP${RESTORE} for a public DNS server.
 
 [OPTIONS] To be used in place of a DNS server.
@@ -109,29 +109,33 @@ Built-In Public DNS Options include:
              found.
              NOTE: Using the 'prop' option ${ULINE}will${RESTORE} test
              international servers.
-     a		: Display the 'A' record only.
-     mx	: This will run a check for MX records only using the
+a			: Display the 'A' record only.
+mx		: This will run a check for MX records only using the
               default DNS servers.
-     ns	: This will run a check of the NS records from WHOIS
+ns		: This will run a check of the NS records from WHOIS
                using the default DNS servers.
-    spf	: This will run a check for SPF records.
-    ptr	: This will return the PTR for the given domain.
-    arin	: This runs an ARIN check on the 'A' record of the domain.
-   dmarc: This will run a check for DMARC records.
-    dkim	: This will run a check for DKIM records.
-    spam: This will check NS, PTR, MX, SPF and DMARC for causes for
+spf		: This will run a check for SPF records.
+ptr		: This will return the PTR for the given domain.
+arin		: This runs an ARIN check on the 'A' record of the domain.
+dmarc	: This will run a check for DMARC records.
+dkim		: This will run a check for DKIM records.
+spam	: This will check NS, PTR, MX, SPF and DMARC for causes for
               being marked as SPAM or being blacklisted.  If this argument is
               passed with others, this is the only one that will run.
-    caa	: Perform a CAA check to ensure that the SSL being issued can be done
+caa		: Perform a CAA check to ensure that the SSL being issued can be done
               by the CA that's issuing the SSL.
-    ssl	: Run a setup of standard tasks for installation of SSL certificates,
+ssl		: Run a setup of standard tasks for installation of SSL certificates,
               as well as running a CAA check. If this argument is passed with
               others it will be the only one that runs.
-    whois: Provides and extended output of WHOIS data.  It's not the full WHOIS,
+whois	: Provides and extended output of WHOIS data.  It's not the full WHOIS,
               just additional informaiton provided over the default test.
 whoisfull: This will perform a full 'whois' lookup of the domain. If this
               argument is passed with others, it will be th eonly one that runs.
-  update: This will update the Newcall script to the latest version available.s.
+reg -or-
+isus -or-
+tucows	: These three options will all trigger the Regisrar lookup process to see where a
+			  domain is registered.
+update	: This will update the Newcall script to the latest version available.
 
 EXAMPLES: newcall hummdis.com
           newcall hummdis.com veri
@@ -193,7 +197,7 @@ mx_search () {
     fi
     # Report the owner of the first MX record IP address, if we can get it.
     # This way, we know who hosts the email if it can't be identified by the MX record itself.
-    NETNAME=$(whois -d $IP | grep -i 'NetName' | sed 's/^/    /')
+    NETNAME=$(whois -f -d $IP | grep -i 'NetName' | sed 's/^/    /')
     if [ ! -z "$NETNAME" ]; then
         echo "$NETNAME"
     fi
@@ -209,9 +213,9 @@ soa_search() {
 
 tldwhois() {
     # Determines the correct WHOIS lookup based on the TLD of the domain. This increases the reply success rate.
-    serv=$(whois -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
+    serv=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
     echo $serv | if grep -iq 'Unable to connect'; then
-        whois --host=$(whois --host=whois.iana.org $1 | grep -i 'refer:' | cut -d' ' -f9) $1
+        whois -f --host=$(whois --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f9) $1
     else
         echo "$serv"
     fi
@@ -220,15 +224,14 @@ tldwhois() {
 whois_search() {
     # WHOIS information - Quick Look
     echo "${LYELLOW}WHOIS${RESTORE} for ${FDOMAIN}:"
-
     # Provided by Jamie P.
-    WSERV=$(whois -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
+    WSERV=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
     echo $WSERV | if grep -iq 'Unable to connect'; then
-        whois --host=$(whois --host=whois.iana.org $1 | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i 'Date:\|Status:\|Registrar:' | sed 's/^/    /'
+        whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i 'Date:\|Status:\|Registrar:' | grep -Po '\w+:\K(\s?\S+)+' | sed 's/^/    /'
     else
-        echo "$WSERV" | grep -i 'Date:\|Status:\|Registrar:' | sed 's/^/    /'
+        echo "$WSERV" | grep -i 'Date:\|Status:\|Registrar:' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
     fi
-    tucows_check
+    reg_check
 }
 
 whois_check() {
@@ -236,41 +239,31 @@ whois_check() {
     echo "${LYELLOW}WHOIS Expanded${RESTORE} for ${FDOMAIN}:"
 
     # Provided by Jamie P.
-    whois -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Email\|Registrar' | sed 's/^/    /'
-    ISTUC=$(whois -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Registrar:' | grep -i tucows | sed 's/^/    /')
-    if [ ! -z "$ISTUC" ]; then
-        tucows_check
-    else
-        echo "${LRED}Not Registered Here${RESTORE} - Must contact$(whois ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')"
-    fi
+    whois -f -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Email\|Registrar' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
+    reg_check
 }
 
 whois_full() {
     # WHOIS information - Full Look
     echo "${LYELLOW}WHOIS Full${RESTORE} for ${FDOMAIN}:"
     sleep 1
-    whois -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN
-    ISTUC=$(whois -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Registrar:' | grep -i tucows | sed 's/^/    /')
-    if [ ! -z "$ISTUC" ]; then
-        tucows_check
-    else
-        echo "${LRED}Not Registered Here${RESTORE} - Must contact$(whois ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')"
-    fi  
+    whois -f -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN
+    reg_check
     # We're done. Don't allow 'whois_full' to be stacked.
     exit 0
 }
 
-tucows_check() {
+reg_check() {
     # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
 	# Updated Regex code per Nick P.
-    echo "${LYELLOW}Tucows Registrar Check for${RESTORE} ${FDOMAIN}:"
-    ISUS=$(whois -h whois.tucows.com ${DOMAIN} | grep 'InMotion Hosting\|Web Hosting Hub')
+	echo "${LYELLOW}Registrar Check${RESTORE} for ${FDOMAIN}:"
+    ISUS=$(whois -f -h whois.tucows.com ${DOMAIN} | grep 'InMotion Hosting\|Web Hosting Hub')
     if [[ $ISUS = *"InMotion Hosting"* ]]; then
         echo "${LGREEN}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
     elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
         echo "${LGREEN}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
     else
-        echo "${LRED}Not Registered Here${RESTORE} - Must contact$(whois ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
+        echo "${LRED}Not Registered Here${RESTORE} - Must contact$(whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
     fi
 }
 
@@ -280,7 +273,7 @@ arin_search() {
     #IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | \
     #   awk '{ print $2; exit }' | dig +short -f -)
     #echo "$IP"
-    whois -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n1) | grep -i 'NetName|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
+    whois -f -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n1) | grep -i 'NetName|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
 }
 
 ns_check() {
@@ -289,7 +282,7 @@ ns_check() {
     echo "  DIG results:"
     dig $DOMAIN NS +short | sort -n |  sed 's/^/    /'
     echo "  WHOIS NS results:"
-    whois -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | sed 's/^/    /'
+    whois -f -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | sed 's/^/    /'
 }
 
 spf_check() {
@@ -659,6 +652,10 @@ do
             set_dns $DEFDNS
             caa_check
             ;;
+		reg | isus | tucows) # Perform Registrar check only
+			set_dns $DEFDNS
+			reg_check
+			;;
         help | -h | --help) # Display help text
             usage
             exit 0
