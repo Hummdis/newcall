@@ -8,9 +8,10 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.7.7
+VERSION=1.7.8
 
 RUN_PATH=~/bin
+TEMP_DIR=/tmp/$(whoami)/
 
 # Formatting Vars
 RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
@@ -460,8 +461,9 @@ version_compare() {
 
 update_check() {
 	# Perform update check.
-	wget -O /tmp/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
-	NEW_VER=$(cat /tmp/newcall | grep -m 1 "VERSION=" | cut -d = -f 2)
+	mkdir -p ${TEMP_DIR}
+	wget -O ${TEMP_DIR}/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
+	NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f 2)
     version_compare ${NEW_VER} ${VERSION}
     case $? in
         0)  # No update available. Do nothing.
