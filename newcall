@@ -477,7 +477,7 @@ update_check() {
 		wget -O ${TEMP_DIR}/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
 	fi
 	# Use the existing file to check.
-	NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f )
+	NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f 2)
 	version_compare ${NEW_VER} ${VERSION}
 	case $? in
 		0)  # No update available. Do nothing.
