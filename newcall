@@ -8,10 +8,10 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.1
+VERSION=1.8.2
 
 RUN_PATH=~/bin
-TEMP_DIR=/tmp/$(whoami)/
+TEMP_DIR=/tmp/$(whoami)
 
 # Formatting Vars
 RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
@@ -49,7 +49,7 @@ L3='209.244.0.3'      # Level3 DNS
 QUAD='9.9.9.9'        # Quad9 DNS
 Q9BL='9.9.9.10'       # Quad9 No Blocks DNS --DEFAULT--
 OPEN='208.67.222.222' # OpenDNS (Oracle)
-NIC='172.98.193.42'  # OpenNIC (USA)
+NIC='172.98.193.42'   # OpenNIC (USA)
 VERI='64.6.64.6'      # Verisign DNS
 NORT='199.85.127.10'  # Norton ConnectSafe DNS
 COMO='8.20.247.20'    # Comodo Secure DNS
@@ -61,9 +61,9 @@ W5='202.46.127.227'   # CNX (Malaysia)
 W6='41.217.204.165'   # Layer3 (Nigeria)
 W7='45.71.185.100'    # OpenNIC (Ecuador)
 W8='87.98.175.85'     # OpenNIC (France)
-W9='51.89.88.66'     # OpenNIC (Germany)
-W10='172.105.220.183'  # OpenNIC (Japan)
-W11='206.189.155.220'   # OpenNIC (Singapore)
+W9='51.89.88.66'      # OpenNIC (Germany)
+W10='172.105.220.183' # OpenNIC (Japan)
+W11='206.189.155.220' # OpenNIC (Singapore)
 W12='207.148.83.241'  # OpenNIC (Australia)
 W13='5.132.191.104'   # OpenNIC (Austria)
 W14='172.98.193.42'   # OpenNIC (BackplaneDNS)
@@ -229,8 +229,16 @@ whois_search() {
     WSERV=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
     echo $WSERV | if grep -iq 'Unable to connect'; then
         whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i 'Date:\|Status:\|Registrar:' | grep -Po '\w+:\K(\s?\S+)+' | sed 's/^/    /'
-    else
+		CH=$(whois ${DOMAIN} | grep -i 'clientHold')
+		if [ ! -z "$CH" ]; then
+			echo -e "\n${LRED}${ULINE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${RESTORE}\n" | sed 's/^/    /'
+		fi
+	else
         echo "$WSERV" | grep -i 'Date:\|Status:\|Registrar:' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
+		CH=$(whois ${DOMAIN} | grep -i 'clientHold')
+		if [ ! -z "$CH" ]; then
+			echo -e "\n${LRED}${ULINE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${RESTORE}\n" | sed 's/^/    /'
+		fi
     fi
     reg_check
 }
@@ -241,7 +249,7 @@ whois_check() {
 
     # Provided by Jamie P.
     whois -f -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Email\|Registrar' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
-    reg_check
+	reg_check
 }
 
 whois_full() {
@@ -260,11 +268,11 @@ reg_check() {
 	echo "${LYELLOW}Registrar Check${RESTORE} for ${FDOMAIN}:"
     ISUS=$(whois -f -h whois.tucows.com ${DOMAIN} | grep 'InMotion Hosting\|Web Hosting Hub')
     if [[ $ISUS = *"InMotion Hosting"* ]]; then
-        echo "${LGREEN}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
+        echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
     elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
-        echo "${LGREEN}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
+        echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
     else
-        echo "${LRED}Not Registered Here${RESTORE} - Must contact$(whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
+        echo "${WHITE}Not Registered Here${RESTORE} - Must contact$(whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
     fi
 }
 
