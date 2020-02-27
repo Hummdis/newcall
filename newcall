@@ -217,7 +217,7 @@ tldwhois() {
     # Determines the correct WHOIS lookup based on the TLD of the domain. This increases the reply success rate.
     serv=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
     echo $serv | if grep -iq 'Unable to connect'; then
-        whois -f --host=$(whois --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f9) $1
+        whois -f -h $(whois --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f9) $DOMAIN
     else
         echo "$serv"
     fi
@@ -229,7 +229,7 @@ whois_search() {
     # Provided by Jamie P.
     WSERV=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
     echo $WSERV | if grep -iq 'Unable to connect'; then
-        whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i 'Date:\|Status:\|Registrar:' | grep -Po '\w+:\K(\s?\S+)+' | sed 's/^/    /'
+        whois -f -h $(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) $DOMAIN | grep -i 'Date:\|Status:\|Registrar:' | grep -Po '\w+:\K(\s?\S+)+' | sed 's/^/    /'
 		CH=$(whois ${DOMAIN} | grep -i 'clientHold')
 		if [ ! -z "$CH" ]; then
 			echo -e "\n${LRED}${ULINE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${RESTORE}\n" | sed 's/^/    /'
@@ -273,7 +273,7 @@ reg_check() {
     elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
         echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
 	elif [[ $ISUS = *"Tucows"* ]]; then
-		echo "${WHITE}Not Registered Here${RESTORE} - Must contact " | sed 's/^/    /'
+		echo "${WHITE}Not Registered Here${RESTORE} - Must contact$(whois -h whois.tucows.com ${DOMAIN} | grep -i "reseller:" | grep -Po '\w+:\K (\s?\S+)+')" | sed 's/^/    /'
 	else
         echo "${WHITE}Not Registered Here${RESTORE} - Must contact$(whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
     fi
