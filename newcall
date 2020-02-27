@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.3
+VERSION=1.8.4
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -26,12 +26,13 @@ BBLUE=$(echo -en '\e[44m')          # Blue Background
 ULINE=$(echo -en '\033[4m')         # Underline
 
 # These are just place holders. They may be set/reset elsewhere.
-DOMAIN=$1
-FDOMAIN=${LCYAN}${1}${RESTORE}
+USER_DOMAIN=''
+FDOMAIN=''
 DNS_SERVER='' # DNS server.
 FDNS_SERVER='' # Formatted DNS server.
 DNS='' # Used in Loop.
 SERVER='' # Used in propagation check.
+
 
 # DNS Servers
 # Worldwide Public DNS servers.
@@ -55,7 +56,7 @@ NORT='199.85.127.10'  # Norton ConnectSafe DNS
 COMO='8.20.247.20'    # Comodo Secure DNS
 W1='51.254.25.115'    # OpenNIC (Czech Republic)
 W2='202.53.93.10'     # NetLinx (India)
-W3='41.57.125.214'    # Zarnet (Zimbabwe)
+W3='41.78.78.34'      # Harare (Zimbabwe)
 W4='190.111.246.169'  # CPS (Argentina)
 W5='202.46.127.227'   # CNX (Malaysia)
 W6='41.217.204.165'   # Layer3 (Nigeria)
@@ -63,7 +64,7 @@ W7='45.71.185.100'    # OpenNIC (Ecuador)
 W8='87.98.175.85'     # OpenNIC (France)
 W9='51.89.88.66'      # OpenNIC (Germany)
 W10='172.105.220.183' # OpenNIC (Japan)
-W11='206.189.155.220' # OpenNIC (Singapore)
+W11='103.200.218.78'  # Freenom World (Singapore)
 W12='207.148.83.241'  # OpenNIC (Australia)
 W13='5.132.191.104'   # OpenNIC (Austria)
 W14='172.98.193.42'   # OpenNIC (BackplaneDNS)
@@ -266,12 +267,14 @@ reg_check() {
     # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
 	# Updated Regex code per Nick P.
 	echo "${LYELLOW}Registrar Check${RESTORE} for ${FDOMAIN}:"
-    ISUS=$(whois -f -h whois.tucows.com ${DOMAIN} | grep 'InMotion Hosting\|Web Hosting Hub')
+    ISUS=$(whois -f -h whois.tucows.com ${DOMAIN})
     if [[ $ISUS = *"InMotion Hosting"* ]]; then
         echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
     elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
         echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
-    else
+	elif [[ $ISUS = *"Tucows"* ]]; then
+		echo "${WHITE}Not Registered Here${RESTORE} - Must contact " | sed 's/^/    /'
+	else
         echo "${WHITE}Not Registered Here${RESTORE} - Must contact$(whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
     fi
 }
@@ -521,8 +524,11 @@ case $1 in
     *) # We have something! Then set the variables.
         # We're trusting the user gave a valid TLD. If not, the results will
         # show that it's invalid.
-        DOMAIN=$1
-        FDOMAIN=${LCYAN}${1}${RESTORE}
+		USER_DOMAIN=$1
+		# From Shehab A. -- Allow the copy-and-paste of a domain from a browser by
+		# stripping the 'http://' and 'https://' from the domain and the trailing /.
+		DOMAIN=$(echo "$USER_DOMAIN" | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+        FDOMAIN=${LCYAN}${DOMAIN}${RESTORE}
         ;;
 esac
 
