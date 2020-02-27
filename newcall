@@ -8,10 +8,11 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.4
+VERSION=1.8.5
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
+WHOIS_DATA=~/tmp/.whois.data
 
 # Formatting Vars
 RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
@@ -25,13 +26,14 @@ WHITE=$(echo -en '\033[01;37m')     # Bold White
 BBLUE=$(echo -en '\e[44m')          # Blue Background
 ULINE=$(echo -en '\033[4m')         # Underline
 
-# These are just place holders. They may be set/reset elsewhere.
-USER_DOMAIN=''
-FDOMAIN=''
-DNS_SERVER='' # DNS server.
-FDNS_SERVER='' # Formatted DNS server.
-DNS='' # Used in Loop.
-SERVER='' # Used in propagation check.
+# These are just place holders. They may be set/reset elsewhere as they're defined here
+# because they should not be blank when the script is actually running.
+USER_DOMAIN=''	# User-provided domain.
+FDOMAIN=''		# Formatted domain
+DNS_SERVER=''	# DNS server.
+FDNS_SERVER=''	# Formatted DNS server.
+DNS='' 			# Used in loop.
+SERVER=''		# Used in propagation check.
 
 
 # DNS Servers
@@ -78,6 +80,8 @@ DEFDNS="$Q9BL"
 # FUNCTIONS
 usage() {
     echo "
+Newcall DNS Lookup Tool - v${VERSION}
+
 Usage: newcall <domain> [dns | ..OPTIONS..]
 
 <domain> - ${WHITE}Required${RESTORE} - This is the TLD to search.
@@ -97,7 +101,7 @@ Built-In Public DNS Options include:
     veri 	  : Verisign Public DNS
     nort 	  : Norton ConnectSafe
     como 	  : Comodo Secure DNS
-    -OR- Any manually entered ${LCYAN}IP${RESTORE} for a public DNS server.
+    -OR- Any manually entered ${LCYAN}IPv4${RESTORE} for a public DNS server.
 
 [OPTIONS] To be used in place of a DNS server.
 
@@ -143,6 +147,11 @@ EXAMPLES: newcall hummdis.com
           newcall hummdis.com 8.8.4.4
           newcall hummdis.com ns mx spf dmarc
           newcall hummdis.com spam
+
+Created by Jeffrey Shepherd (https://hummdis.com).
+This work is licensed under the Creative Commons Attribution-ShareAlike  
+4.0 International License. To view a copy of this license,
+visit http://creativecommons.org/licenses/by-sa/4.0/.
 "
 }
 
@@ -153,6 +162,9 @@ default_search() {
  DNS Server for results.${RESTORE}"
 
     echo ""
+
+	# Set the whois data
+	set_whois
 
     # By default, we'll check IP, Host, MX, and SOA.
     ip_search
@@ -173,6 +185,72 @@ default_search() {
     exit 0
 }
 
+set_whois() {
+    # Determines the correct WHOIS lookup based on the TLD of the domain. This increases the reply success rate.
+	# Provided by Jamie P.
+	# Make sure our local temp directory exists.
+	if [[ ! -e ~/tmp ]]; then
+		mkdir ~/tmp
+	fi
+	# Set the WHOIS server to use and save the WHOIS data.
+    WHOIS_SERV=$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net
+	whois -f -d -h $WHOIS_SERV $DOMAIN > $WHOIS_DATA
+	if [[ $(cat $WHOIS_DATA) = *"Unable to connect"* ]]; then
+		WHOIS_SERV=$(whois -h whois.iana.org hummdis.com | grep -i "redirected to" | head -1 | awk '{print $3}' | cut -d ] -f 1)	
+	fi
+	
+    # Set the WHOIS information to a file and we'll read from there from now on.
+    whois -f -d -h $WHOIS_SERV $DOMAIN > $WHOIS_DATA
+}
+
+whois_search() {
+    # WHOIS information - Quick Look
+    echo "${LYELLOW}WHOIS${RESTORE} for ${FDOMAIN}:"
+	cat $WHOIS_DATA | grep -i 'Date:\|Status:\|Registrar:' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
+	CH=$(cat $WHOIS_DATA | grep -i 'clientHold')
+	if [ ! -z "$CH" ]; then
+		echo -e "\n${LRED}${ULINE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${RESTORE}\n" | sed 's/^/    /'
+    fi
+	reg_check
+}
+
+whois_expanded() {
+    # WHOIS information - Expanded Look
+	set_whois
+    echo "${LYELLOW}WHOIS Expanded${RESTORE} for ${FDOMAIN}:"
+    cat $WHOIS_DATA | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Registrar\|Email' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
+	reg_check
+}
+
+whois_full() {
+    # WHOIS information - Full Look
+	set_whois
+    echo "${LYELLOW}WHOIS Full${RESTORE} for ${FDOMAIN}:"
+    cat $WHOIS_DATA
+    reg_check
+	# We're done. Don't allow 'whois_full' to be stacked.
+    exit 0
+}
+
+reg_check() {
+    # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
+	# Updated Regex code per Nick P.
+	echo "${LYELLOW}Registrar Check${RESTORE} for ${FDOMAIN}:"
+	# Before we do this, make sure Tucows actually is the registrar, otherwise, don't bother.
+	if [[ ! -z $(cat $WHOIS_DATA | grep "Tucows") ]]; then
+		ISUS=$(whois -f -h whois.tucows.com ${DOMAIN})
+		if [[ $ISUS = *"InMotion Hosting"* ]]; then
+			echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
+		elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
+			echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
+		else
+			echo "${WHITE}Not Registered Here${RESTORE} - Must contact $(echo $ISUS | grep -i 'reseller:' | grep -Po '(Reseller: \K(\w+))')" | sed 's/^/    /'
+		fi
+	else
+        echo "${WHITE}Not Registered Here${RESTORE} - Must contact $(cat $WHOIS_DATA | grep -i 'registrar:' | cut -d : -f 2 | sed -e 's/^[ \t]*//')" | sed 's/^/    /'
+    fi
+}
+
 ip_search() {
     # IP information.
     echo "${LYELLOW}IP${RESTORE} (DNS A Record) for ${FDOMAIN}:"
@@ -181,19 +259,28 @@ ip_search() {
 
 ptr_search () {
     # Host information
-    echo "${LYELLOW}PTR Record${RESTORE} record for ${FDOMAIN}:"
-    host $(dig @$DNS_SERVER $DOMAIN +short) 2>/dev/null | sed 's/^/    /'
+    echo "${LYELLOW}PTR Record(s)${RESTORE} for ${FDOMAIN}:"
+    for i in $(dig @$DNS_SERVER $DOMAIN +short); do
+		host $i | sed 's/^/    /'
+	done
+}
+
+soa_search() {
+    # SOA information
+    echo "${LYELLOW}SOA Record${RESTORE} for ${FDOMAIN}:"
+    dig @$DNS_SERVER $DOMAIN SOA +short | sed 's/^/    /'
 }
 
 mx_search () {
     # MX information
     echo "${LYELLOW}MX Records${RESTORE} for ${FDOMAIN}:"
-    dig @$DNS_SERVER $DOMAIN MX +short | sort -n | sed 's/^/    /'
-	
+    MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for G Suite test later.
+	dig @$DNS_SERVER $DOMAIN MX +short | sort -n | sed 's/^/    /'
+
     echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
     # Just get the IP for the primary MX record that's returned,
     # that is the lowest number (highest priority) returned.
-    IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | awk '{ print $2; exit }' | dig +short -f -)
+    IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | awk '{ print $2; exit }' | dig +short -f - | head -1)
     if [ ! -z "$IP" ]; then
         echo "    $IP"
 		# Report the owner of the first MX record IP address, if we can get it.
@@ -205,87 +292,17 @@ mx_search () {
 		# Also report the PTR, just in case.
 		dig -x $IP +short 2>/dev/null | sed 's/^/    /'
 	fi
-}
-
-soa_search() {
-    # SOA information
-    echo "${LYELLOW}SOA Record${RESTORE} for ${FDOMAIN}:"
-    dig @$DNS_SERVER $DOMAIN SOA +short | sed 's/^/    /'
-}
-
-tldwhois() {
-    # Determines the correct WHOIS lookup based on the TLD of the domain. This increases the reply success rate.
-    serv=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
-    echo $serv | if grep -iq 'Unable to connect'; then
-        whois -f -h $(whois --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f9) $DOMAIN
-    else
-        echo "$serv"
-    fi
-}
-
-whois_search() {
-    # WHOIS information - Quick Look
-    echo "${LYELLOW}WHOIS${RESTORE} for ${FDOMAIN}:"
-    # Provided by Jamie P.
-    WSERV=$(whois -f -h "$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net" ${DOMAIN})
-    echo $WSERV | if grep -iq 'Unable to connect'; then
-        whois -f -h $(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) $DOMAIN | grep -i 'Date:\|Status:\|Registrar:' | grep -Po '\w+:\K(\s?\S+)+' | sed 's/^/    /'
-		CH=$(whois ${DOMAIN} | grep -i 'clientHold')
-		if [ ! -z "$CH" ]; then
-			echo -e "\n${LRED}${ULINE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${RESTORE}\n" | sed 's/^/    /'
-		fi
+	if [[ $MX = *"google.com"* ]]; then
+		G_SUITE='true'
 	else
-        echo "$WSERV" | grep -i 'Date:\|Status:\|Registrar:' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
-		CH=$(whois ${DOMAIN} | grep -i 'clientHold')
-		if [ ! -z "$CH" ]; then
-			echo -e "\n${LRED}${ULINE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${RESTORE}\n" | sed 's/^/    /'
-		fi
-    fi
-    reg_check
-}
-
-whois_check() {
-    # WHOIS information - Expanded Look
-    echo "${LYELLOW}WHOIS Expanded${RESTORE} for ${FDOMAIN}:"
-
-    # Provided by Jamie P.
-    whois -f -d -h "$(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net" $DOMAIN | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Email\|Registrar' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
-	reg_check
-}
-
-whois_full() {
-    # WHOIS information - Full Look
-    echo "${LYELLOW}WHOIS Full${RESTORE} for ${FDOMAIN}:"
-    sleep 1
-    whois -f -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN
-    reg_check
-    # We're done. Don't allow 'whois_full' to be stacked.
-    exit 0
-}
-
-reg_check() {
-    # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
-	# Updated Regex code per Nick P.
-	echo "${LYELLOW}Registrar Check${RESTORE} for ${FDOMAIN}:"
-    ISUS=$(whois -f -h whois.tucows.com ${DOMAIN})
-    if [[ $ISUS = *"InMotion Hosting"* ]]; then
-        echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
-    elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
-        echo "${LMAGENTA}REGISTERED HERE!${RESTORE} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
-	elif [[ $ISUS = *"Tucows"* ]]; then
-		echo "${WHITE}Not Registered Here${RESTORE} - Must contact$(whois -h whois.tucows.com ${DOMAIN} | grep -i "reseller:" | grep -Po '\w+:\K (\s?\S+)+')" | sed 's/^/    /'
-	else
-        echo "${WHITE}Not Registered Here${RESTORE} - Must contact$(whois -f --host=$(whois -f --host=whois.iana.org ${DOMAIN} | grep -i 'refer:' | cut -d' ' -f 9) ${DOMAIN} | grep -i "registrar:" | grep -Po '\w+:\K(\s?\S+)+')" | sed 's/^/    /'
-    fi
+		G_SUITE='false'
+	fi
 }
 
 arin_search() {
     # This performs an ARIN check on the domain given.
-    echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short))${RESTORE}:"
-    #IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | \
-    #   awk '{ print $2; exit }' | dig +short -f -)
-    #echo "$IP"
-    whois -f -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n1) | grep -i 'NetName|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
+    echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short | tail -n 1))${RESTORE}:"
+    whois -f -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n 1) | grep -i 'NetName\|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
 }
 
 ns_check() {
@@ -294,7 +311,7 @@ ns_check() {
     echo "  DIG results:"
     dig $DOMAIN NS +short | sort -n |  sed 's/^/    /'
     echo "  WHOIS NS results:"
-    whois -f -d -h $(echo ${DOMAIN} | cut -f2- -d .).whois-servers.net $DOMAIN | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | sed 's/^/    /'
+    cat $WHOIS_DATA | grep -i 'Name Server:' | awk '{$val=$val;print $3}' | sed 's/^/    /'
 }
 
 spf_check() {
@@ -307,6 +324,9 @@ dkim_check() {
     # See if there is a DKIM record for the domain.
     echo "${LYELLOW}DKIM${RESTORE} for ${FDOMAIN}:"
     dig @$DNS_SERVER default._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /'
+	if [ $G_SUITE == 'true' ]; then
+		dig @$DNS_SERVER google._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /'
+	fi
 }
 
 dmarc_check() {
@@ -352,11 +372,8 @@ prop_check() {
             # First, we want to query the authoritative name server for the
             # given domain.  This way we can confirm if the SOA from other
             # servers match the authoritative.
-            AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
+            AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | sort -n | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
             AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
-
-            #AUTH_NS=$(whois -d $DOMAIN | grep -i 'Name Server:' | awk '{print $3}' | awk 'NR!=2{print $1}')
-            #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
 
             # Most domains have at least two name servers. However, to prevent
             # the response from being too slow, we'll limit the check to just
@@ -366,7 +383,7 @@ prop_check() {
                 echo "Unable to obtain a valid SOA from the first authoritative name server."
                 echo -e "    Trying next available name server...\n"
 
-                AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | awk '{ print $1 }' ORS=' ' | awk '{ print $2 }')
+                AUTH_NS=$(dig +noall +answer +authority +short $DOMAIN NS | sort -n | awk '{ print $1 }' ORS=' ' | awk '{ print $2 }')
                 AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
 
                 #AUTH_NS=$(whois -d $DOMAIN | grep -i 'Name Server:' | awk '{print $3}' | awk 'NR!=1{print $1}')
@@ -382,8 +399,8 @@ prop_check() {
                 fi
             else
                 # We have a valid result out of the gate. Use this.
-                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH} ${RESTORE}"
-                RESULT=$(dig @$DNS $DOMAIN SOA +short | awk '{ print $3 }')
+                echo "${BBLUE}${WHITE}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${RESTORE}"
+                RESULT=${AUTH}
             fi
         else
             # We need the results of the query so that we can display an actual
@@ -414,6 +431,8 @@ prop_check() {
         fi
 
         # Print the results. Remember, FDNS_SERVER is already formatted.
+		# The answer is on a new line so that one can visually scroll down the
+		# list of SOAs returned to visually compare.
         echo "DNS: ${SERVER}:"
         echo "    $ANSWER"
     done
@@ -489,7 +508,7 @@ update_check() {
 		0)  # No update available. Do nothing.
 			;;
 		1)  # Report a new version
-				echo "${LMAGENTA}Update Check${RESTORE} - Newcall ${LRED}v${NEW_VER} available!${RESTORE}"
+				echo "${LMAGENTA}Update Check${RESTORE} - Newcall ${LYELLOW}v${NEW_VER} available!${RESTORE}"
 				sleep 2
 			;;
 		2)  # The public version is older than the current version.
@@ -514,13 +533,21 @@ update() {
 # Main portion. Process the arguments and perform checks.
 # Make sure we got a domain provided. If not, display usage and exit.
 case $1 in
-    '' | -h | --help) # Nothing | -h | --help passed.
+    '' | help | -h | --help) # Nothing | -h | --help passed.
         usage
         exit 1
         ;;
 	update) # Run Update.
 		update
 		;;
+	version | -v | --version) # Display version information
+        echo "Newcall DNS Lookup Tool - v${VERSION}"
+		echo "Created by Jeffrey Shepherd (https://hummdis.com).
+This work is licensed under the Creative Commons Attribution-ShareAlike  
+4.0 International License. To view a copy of this license,
+visit http://creativecommons.org/licenses/by-sa/4.0/."
+        exit 0
+        ;;
     *) # We have something! Then set the variables.
         # We're trusting the user gave a valid TLD. If not, the results will
         # show that it's invalid.
@@ -605,6 +632,7 @@ do
         ssl) # Only run checks that we care about when installing SSLs.
             # This is NOT stackable. Only run these options.
             set_dns $DEFDNS
+			set_whois
             ip_search
             ns_check
             ptr_search
@@ -615,6 +643,7 @@ do
         spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
             # This is NOT stackable. Only run these options.
             set_dns $DEFDNS
+			set_whois
             ns_check
             ptr_search
             mx_search
@@ -642,7 +671,7 @@ do
             ns_check
             ;;
         whois) # Get more WHOIS information.
-            whois_check
+            whois_expanded
             ;;
         spf) # Show only SPF records.
             set_dns $DEFDNS
@@ -670,23 +699,15 @@ do
             ;;
 		reg | isus | tucows) # Perform Registrar check only
 			set_dns $DEFDNS
+			set_whois
 			reg_check
 			;;
-        help | -h | --help) # Display help text
-            usage
-            exit 0
-            ;;
-        version | -v | --help) # Display version information
-            echo "Newcall"
-            echo "Version: ${VERSION}"
-            exit 0
-            ;;
         *) # Use the IP passed as the 2nd arg. Validate IP, else show usage.
             if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
                 set_dns $2
                 default_search
             else
-                echo "${LRED}Invalid IPv4 address provided.${RESTORE}"
+                echo "${LRED}Invalid IPv4 address provided.${RESTORE}. No IPv6 support at this time."
                 usage
                 exit 2
             fi
