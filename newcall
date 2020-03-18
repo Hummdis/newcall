@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.5
+VERSION=1.8.6
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -196,7 +196,7 @@ set_whois() {
     WHOIS_SERV=$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net
 	whois -f -d -h $WHOIS_SERV $DOMAIN > $WHOIS_DATA
 	if [[ $(cat $WHOIS_DATA) = *"Unable to connect"* ]]; then
-		WHOIS_SERV=$(whois -h whois.iana.org hummdis.com | grep -i "redirected to" | head -1 | awk '{print $3}' | cut -d ] -f 1)	
+		WHOIS_SERV=$(whois -h whois.iana.org ${DOMAIN} | grep -i "redirected to" | head -1 | awk '{print $3}' | cut -d ] -f 1)	
 	fi
 	
     # Set the WHOIS information to a file and we'll read from there from now on.
