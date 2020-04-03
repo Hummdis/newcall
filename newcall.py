@@ -23,38 +23,39 @@ import argparse
 # Thus, calling the Verisign IP would appear as: servers[8][1]
 servers = [ ['imh',  '74.124.210.242',  "InMotion Hosting"],
             ['res',  '216.194.168.112', "InMotion Hosting Reseller NS"],
+            ['hub',  '173.205.127.4',   "Web Hosting Hub"],
             ['goog', '8.8.8.8',         "Google Public DNS"],
             ['cf',   '1.1.1.1',         "Cloudflare Public DNS"],
             ['l3',   '209.244.0.3',     "Level3 Public DNS"],
             ['quad', '9.9.9.9',         "Quad9 Public DNS"],
             ['q9bl', '9.9.9.10',        "Quad9 No Blocks DNS"],
             ['open', '208.67.222.222',  "OpenDNS"],
-            ['nic',  '165.227.22.116',  "OpenNIC USA"],
+            ['nic',  '172.98.193.42',   "OpenNIC USA"],
             ['veri', '64.6.64.6',       "Verisign Public DNS"],
             ['nort', '199.85.127.10',   "Norton ConnectSafe"],
             ['como', '8.20.247.20',     "COMODO Secure DNS"],
             ['w1',   '51.254.25.115',   "OpenNIC (Czech Republic)"],
-            ['w2',   '202.53.93.10',    "OpenNIC (India)"],
-            ['w3',   '197.189.228.154', "OpenNIC (South Africa)"],
-            ['w4',   '200.49.159.68',   "OpenNIC (Argentina)"],
-            ['w5',   '202.46.127.227',  "OpenNIC (Malaysia)"],
-            ['w6',   '41.217.204.165',  "OpenNIC (Nigeria)"],
+            ['w2',   '202.53.93.10',    "NetLinx (India)"],
+            ['w3',   '41.57.125.214',   "Zarnet (Zimbabwe)"],
+            ['w4',   '190.111.246.169', "CPS (Argentina)"],
+            ['w5',   '202.46.127.227',  "CNX (Malaysia)"],
+            ['w6',   '41.217.204.165',  "Layer3 (Nigeria)"],
             ['w7',   '45.71.185.100',   "OpenNIC (Ecuador)"],
-            ['w8',   '195.154.226.236', "OpenNIC (France)"],
-            ['w9',   '82.141.39.32',    "OpenNIC (Germany)"],
-            ['w10',  '178.17.170.179',  "OpenNIC (Moldova, Republic of)"],
-            ['w11',  '139.99.96.146',   "OpenNIC (Singapore)"],
+            ['w8',   '87.98.175.85',    "OpenNIC (France)"],
+            ['w9',   '51.89.88.66',     "OpenNIC (Germany)"],
+            ['w10',  '172.105.220.183', "OpenNIC (Japan)"],
+            ['w11',  '206.189.155.220', "OpenNIC (Singapore)"],
             ['w12',  '207.148.83.241',  "OpenNIC (Australia)"],
             ['w13',  '5.132.191.104',   "OpenNIC (Austria)"],
             ['w14',  '172.98.193.42',   "OpenNIC (BackplaneDNS)"],
-            ['w15',  '91.217.137.37',   "OpenNIC (Russia)"],
-            ['w16',  '146.185.176.36',  "OpenNIC (Netherlands)"],
+            ['w15',  '58.27.149.60',    "OpenNIC (Pakistan)"],
+            ['w16',  '91.217.137.37',   "OpenNIC (Russia)"],
             ['w17',  '192.71.245.208',  "OpenNIC (Italy)"],
             ['w18',  '192.99.85.244',   "OpenNIC (Canada)"],
             ['w19',  '104.238.186.189', "OpenNIC (UK Great Britain)"]
             ]
 # This defines the default Name Server.
-default_nameserver = servers[6]
+default_nameserver = servers[7]
 
 # Search the 'servers' array for the given option.
 def nssearch(opt):
@@ -69,7 +70,7 @@ def nssearch(opt):
 # For setting terminal colors.
 class termcolors:
     # Formatting Vars
-    END         = '\033[0m'        # Reset to normal TTY
+    NORMAL      = '\033[0m'        # Reset to normal TTY
     RED         = '\033[01;31m'    # Bold Red
     GREEN       = '\033[01;32m'    # Bold Green
     YELLOW      = '\033[01;33m'    # Bold Yellow
@@ -157,7 +158,20 @@ if __name__ == '__main__':
     argparser.add_argument('-r', '--raw')
     argparser.add_argument('-h', '--help')
     argparser.add_argument('prop')
+    argparser.add_argument('a')
+    argparser.add_argument('mx')
+    argparser.add_argument('ns')
+    argparser.add_argument('spf')
+    argparser.add_argument('ptr')
+    argparser.add_argument('arin')
+    argparser.add_argument('dmarc')
+    argparser.add_argument('dkim')
     argparser.add_argument('spam')
+    argparser.add_argument('caa')
+    argparser.add_argument('ssl')
     argparser.add_argument('whois')
+    argparser.add_argument('whoisfull')
+    argparser.add_argument('reg', 'isus', 'tucows')
+    argparser.add_argument('update')
     
     main()
