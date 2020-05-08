@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.6
+VERSION=1.8.7
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -58,7 +58,7 @@ NORT='199.85.127.10'  # Norton ConnectSafe DNS
 COMO='8.20.247.20'    # Comodo Secure DNS
 W1='51.254.25.115'    # OpenNIC (Czech Republic)
 W2='202.53.93.10'     # NetLinx (India)
-W3='41.78.78.34'      # Harare (Zimbabwe)
+W3='41.57.125.214'    # Zarnet (Zimbabwe)
 W4='190.111.246.169'  # CPS (Argentina)
 W5='202.46.127.227'   # CNX (Malaysia)
 W6='41.217.204.165'   # Layer3 (Nigeria)
@@ -66,7 +66,7 @@ W7='45.71.185.100'    # OpenNIC (Ecuador)
 W8='87.98.175.85'     # OpenNIC (France)
 W9='51.89.88.66'      # OpenNIC (Germany)
 W10='172.105.220.183' # OpenNIC (Japan)
-W11='103.200.218.78'  # Freenom World (Singapore)
+W11='23.100.114.37'   # Sheerwater (Singapore)
 W12='207.148.83.241'  # OpenNIC (Australia)
 W13='5.132.191.104'   # OpenNIC (Austria)
 W14='172.98.193.42'   # OpenNIC (BackplaneDNS)
