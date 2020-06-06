@@ -1,4 +1,3 @@
-_Forked from Hummdis/newcall, all credit for the original script goes to Jeffrey Shepherd_
 # Newcall DNS Lookup Tool
 
 ## Intallation
