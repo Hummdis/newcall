@@ -14,6 +14,12 @@ RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
 WHOIS_DATA=~/tmp/.whois.data
 
+# We run this query so many times, why not just do it once, set it and forget it?
+# This may result in an overall reduction in time to run this script.
+# We initialize it here and it gets called later in the 'dig_once' function
+# after we've set the $DNS_SERVER. -AlexKr
+DIG_SHORT=''
+
 # Formatting Vars
 RESTORE=$(echo -en '\033[0m')       # Reset to normal TTY
 LRED=$(echo -en '\033[01;31m')      # Bold Red
@@ -254,13 +260,13 @@ reg_check() {
 ip_search() {
     # IP information.
     echo "${LYELLOW}IP${RESTORE} (DNS A Record) for ${FDOMAIN}:"
-    dig @$DNS_SERVER $DOMAIN +short | sed 's/^/    /'
+    echo ${DIG_SHORT} | sed 's/^/    /' # Use DIG_SHORT var instead of running dig again. -AlexKr
 }
 
 ptr_search () {
     # Host information
     echo "${LYELLOW}PTR Record(s)${RESTORE} for ${FDOMAIN}:"
-    for i in $(dig @$DNS_SERVER $DOMAIN +short); do
+    for i in $DIG_SHORT; do
 		host $i | sed 's/^/    /'
 	done
 }
@@ -275,12 +281,13 @@ mx_search () {
     # MX information
     echo "${LYELLOW}MX Records${RESTORE} for ${FDOMAIN}:"
     MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for G Suite test later.
-	dig @$DNS_SERVER $DOMAIN MX +short | sort -n | sed 's/^/    /'
+echo "DEBUG: MX var = $MX"
+	echo ${MX} | sort -n | sed 's/^/    /'	# Why not re-use the 'MX' var instead of running dig mx again? -AlexKr
 
     echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
     # Just get the IP for the primary MX record that's returned,
     # that is the lowest number (highest priority) returned.
-    IP=$(dig @$DNS_SERVER $DOMAIN MX +short | sort -n | awk '{ print $2; exit }' | dig +short -f - | head -1)
+    IP=$(echo ${MX} | sort -n | awk '{ print $2; exit }' | dig +short -f - | head -1) # Same deal, let's re-use 'MX'
     if [ ! -z "$IP" ]; then
         echo "    $IP"
 		# Report the owner of the first MX record IP address, if we can get it.
@@ -301,8 +308,8 @@ mx_search () {
 
 arin_search() {
     # This performs an ARIN check on the domain given.
-    echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(dig @$DNS_SERVER $DOMAIN +short | tail -n 1))${RESTORE}:"
-    whois -f -d $(dig @$DNS_SERVER $DOMAIN +short | tail -n 1) | grep -i 'NetName\|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
+    echo "${LYELLOW}ARIN${RESTORE} for ${FDOMAIN} ${LCYAN}($(echo $DIG_SHORT | tail -n 1))${RESTORE}:"
+    whois -f -d $(echo $DIG_SHORT | tail -n 1) | grep -i 'NetName\|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
 }
 
 ns_check() {
@@ -346,6 +353,13 @@ set_dns() {
     else
         FDNS_SERVER=${WHITE}${REV}${RESTORE}
     fi
+}
+
+dig_once() {
+	# We run this dig command so many times why not just run it 
+	# once and assign it to a var?
+
+	DIG_SHORT=$(dig @$DNS_SERVER $DOMAIN +short) 
 }
 
 prop_check() {
@@ -577,61 +591,75 @@ do
         int | imh) # InMotion
             # See note in DNS variables to know why this can't be default.
             set_dns $IMH
+			dig_once
             default_search
             ;;
         res) # InMotion Reseller
             # See note in DNS variables to know why this can't be default.
             set_dns $RES
+			dig_once
             default_search
             ;;
         hub) # Web Hosting Hub
             # See note in DNS variables to know why this can't be default.
             set_dns $HUB
+			dig_once
             default_search
             ;;
         goog) # Google
             set_dns $GOOG
+			dig_once
             default_search
             ;;
         open) # OpenDNS
             set_dns $OPEN
+			dig_once
             default_search
             ;;
         quad) # Quad9
             set_dns $QUAD
+			dig_once
             default_search
             ;;
         q9bl) # Quad9 Non-Secure
             set_dns $Q9BL
+			dig_once
             default_search
             ;;
         l3) # Level3
             set_dns $L3
+			dig_once
             default_search
             ;;
         nic) # OpenNIC
             set_dns $NIC
+			dig_once
             default_search
             ;;
         cf | '') # Cloudfare
             set_dns $CF
+			dig_once
             default_search
             ;;
         veri) # Verisign
             set_dns $VERI
+			dig_once
             default_search
             ;;
         nort) # Norton ConnectSafe
             set_dns $NORT
+			dig_once
             default_search
             ;;
         como) # Comodo Secure DNS
             set_dns $COMO
+			dig_once
             default_search
             ;;
         ssl) # Only run checks that we care about when installing SSLs.
             # This is NOT stackable. Only run these options.
             set_dns $DEFDNS
+			dig_once
 			set_whois
             ip_search
             ns_check
@@ -643,6 +671,7 @@ do
         spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
             # This is NOT stackable. Only run these options.
             set_dns $DEFDNS
+			dig_once
 			set_whois
             ns_check
             ptr_search
@@ -661,6 +690,7 @@ do
             ;;
         arin) # Perform an ARIN IP check.
             set_dns $DEFDNS
+			dig_once
             arin_search
             ;;
         mx) # Run the MX lookup only.
@@ -691,6 +721,7 @@ do
             ;;
         ptr) # Print the PTR results.
             set_dns $DEFDNS
+			dig_once
             ptr_search
             ;;
         caa) # Run a CAA check.
@@ -705,6 +736,7 @@ do
         *) # Use the IP passed as the 2nd arg. Validate IP, else show usage.
             if [[ "$2" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
                 set_dns $2
+				dig_once
                 default_search
             else
                 echo "${LRED}Invalid IPv4 address provided.${RESTORE}. No IPv6 support at this time."
