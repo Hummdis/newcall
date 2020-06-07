@@ -138,7 +138,7 @@ usage() {
 		           argument is passed with others, it will be the only one that runs.
 		reg -or-
 		isus -or-
-		tucows:	   These three options will all trigger the Regisrar lookup process to see where a
+		tucows:	   These three options will all trigger the Registrar lookup process to see where a
 				   domain is registered.
 		update:	   This will update the Newcall script to the latest version available.
 		
