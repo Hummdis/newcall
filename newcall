@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.8
+VERSION=1.8.9
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -164,8 +164,7 @@ EOF
 default_search() {
     # For informational purposes, tell the user what DNS server we're using.
     clear # Clear the screen when running this operation.
-    echo "${BBLUE}${WHITE}Using $FDNS_SERVER${BBLUE}${WHITE} (${DNS_SERVER})\
- DNS Server for results.${RESTORE}"
+    echo "${BBLUE}${WHITE}Using $FDNS_SERVER${BBLUE}${WHITE} (${DNS_SERVER}) DNS Server for results.${RESTORE}"
 
     echo ""
 
@@ -281,7 +280,7 @@ mx_search () {
     # MX information
     echo "${LYELLOW}MX Records${RESTORE} for ${FDOMAIN}:"
     MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for G Suite test later.
-echo "DEBUG: MX var = $MX"
+	# echo "DEBUG: MX var = $MX"
 	echo ${MX} | sort -n | sed 's/^/    /'	# Why not re-use the 'MX' var instead of running dig mx again? -AlexKr
 
     echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
@@ -590,76 +589,76 @@ do
         int | imh) # InMotion
             # See note in DNS variables to know why this can't be default.
             set_dns $IMH
-	    dig_once
+			dig_once
             default_search
             ;;
         res) # InMotion Reseller
             # See note in DNS variables to know why this can't be default.
             set_dns $RES
-	    dig_once
+			dig_once
             default_search
             ;;
         hub) # Web Hosting Hub
             # See note in DNS variables to know why this can't be default.
             set_dns $HUB
-	    dig_once
+			dig_once
             default_search
             ;;
         goog) # Google
             set_dns $GOOG
-	    dig_once
+			dig_once
             default_search
             ;;
         open) # OpenDNS
             set_dns $OPEN
-	    dig_once
+			dig_once
             default_search
             ;;
         quad) # Quad9
             set_dns $QUAD
-	    dig_once
+			dig_once
             default_search
             ;;
         q9bl) # Quad9 Non-Secure
             set_dns $Q9BL
-	    dig_once
+			dig_once
             default_search
             ;;
         l3) # Level3
             set_dns $L3
-	    dig_once
+			dig_once
             default_search
             ;;
         nic) # OpenNIC
             set_dns $NIC
-	    dig_once
+			dig_once
             default_search
             ;;
         cf | '') # Cloudfare
             set_dns $CF
-	    dig_once
+			dig_once
             default_search
             ;;
         veri) # Verisign
             set_dns $VERI
-	    dig_once
+			dig_once
             default_search
             ;;
         nort) # Norton ConnectSafe
             set_dns $NORT
-	    dig_once
+			dig_once
             default_search
             ;;
         como) # Comodo Secure DNS
             set_dns $COMO
-	    dig_once
+			dig_once
             default_search
             ;;
         ssl) # Only run checks that we care about when installing SSLs.
             # This is NOT stackable. Only run these options.
             set_dns $DEFDNS
-	    dig_once
-	    set_whois
+			dig_once
+			set_whois
             ip_search
             ns_check
             ptr_search
