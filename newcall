@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.9
+VERSION=1.8.10
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -281,12 +281,12 @@ mx_search () {
     echo "${LYELLOW}MX Records${RESTORE} for ${FDOMAIN}:"
     MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for G Suite test later.
 	# echo "DEBUG: MX var = $MX"
-	echo ${MX} | sort -n | sed 's/^/    /'	# Why not re-use the 'MX' var instead of running dig mx again? -AlexKr
+	echo -n "${MX}" | sort -n | sed 's/^/    /'	# Why not re-use the 'MX' var instead of running dig mx again? -AlexKr
 
     echo "${LYELLOW}Primary MX Record IP${RESTORE} for ${FDOMAIN}:"
     # Just get the IP for the primary MX record that's returned,
     # that is the lowest number (highest priority) returned.
-    IP=$(echo ${MX} | sort -n | awk '{ print $2; exit }' | dig +short -f - | head -1) # Same deal, let's re-use 'MX'
+    IP=$(echo "${MX}" | sort -n | awk '{ print $2; exit }' | dig +short -f - | head -1) # Same deal, let's re-use 'MX'
     if [ ! -z "$IP" ]; then
         echo "    $IP"
 		# Report the owner of the first MX record IP address, if we can get it.
