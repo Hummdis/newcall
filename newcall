@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 
 # Created by Jeffrey Shepherd (https://hummdis.com).
 # This work is licensed under the Creative Commons Attribution-ShareAlike  
@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.11
+VERSION=1.8.12
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -279,7 +279,11 @@ reg_check() {
 ip_search() {
     # IP information.
     echo "${YEL}IP${NC} (DNS A Record) for ${FDOMAIN}:"
-    echo "${DIG_SHORT}" | sed 's/^/    /' # Use DIG_SHORT var instead of running dig again. -AlexKr
+    #echo "${DIG_SHORT}" | sed 's/^/    /' # Use DIG_SHORT var instead of running dig again. -AlexKr
+	# Bug - This breaks the ability to use Newcall to query just the "A" record with the "a" argument.
+	# Therefore, DIG must be called again to ensure full functionality. Plus, since this is all the
+	# user is asking to be done, the script does 1 `dig` command either way.
+	dig @$DNS_SERVER $DOMAIN +short | sed 's/^/    /'
 }
 
 ptr_search () {
