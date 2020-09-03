@@ -2,7 +2,7 @@
 
 ## Intallation
 
-1. Login to JumpStation.
+1. Login to the desired machine as any user (no Root required).
 2. Run the following command:
 
     `mkdir -p ~/bin; wget -O ~/bin/newcall https://raw.githubusercontent.com/Hummdis/newcall/master/newcall; chmod +x ~/bin/newcall`
