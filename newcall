@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.12
+VERSION=1.8.13
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -364,12 +364,12 @@ dkim_check() {
     fi
     echo "$DKIM"
     if [ $G_SUITE == 'true' ]; then
-        echo "${WHB}${BLK}G SUITE MX records detected on domain ${FDOMAIN}.${NC}"
+        echo "${MAG}G SUITE MX records detected on domain ${FDOMAIN}.${NC}"
         echo "${YEL}G SUITE DKIM${NC} for ${FDOMAIN}:"
         GDKIM=$(dig @$DNS_SERVER google._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /')
         if [[ -z $GDKIM ]]; then
             echo "${RED}No DKIM entry found for google._domainkey.$DOMAIN found!${NC}"
-            echo "${YEL}Customer needs to obtain the DKIM key to be used from Google."
+            echo "${YEL}Customer needs to obtain the DKIM key to be used from Google.${NC}"
             echo "https://support.google.com/a/answer/174124?hl=en"
         else
             echo "$GDKIM"
