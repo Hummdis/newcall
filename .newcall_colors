@@ -1,0 +1,43 @@
+#####
+# HOW TO USE THIS FILE -- READ IT OR DEAL WITH IT NOT WORKING.
+# 
+# 1. Leave the variable names alone!
+# 2. See #1.
+# 3. Again, leave them alone.  Failure to follow this will break Newcall.
+# 4. The defaults are shown below.  If you want to change these, change the color
+#    code, not the variable.
+#    You can visit the following site for color options and codes:
+#    https://misc.flogisoft.com/bash/tip_colors_and_formatting
+#    For example:
+#    If you want to change headers (default is yellow) to blue, change the "HEAD"
+#    entry below and it'll change.
+#####
+
+### COLORS ###
+
+# Alerts - Default is Bold Red.
+ALERT=$(echo -en '\033[01;31m')
+
+# Cool! - Default is Bold Green
+COOL=$(echo -en '\033[01;32m')
+
+# Headers - Default is Bold Yellow
+HEAD=$(echo -en '\033[01;33m')
+
+# Informational Messages - Default is Bold Light Blue.
+INFO=$(echo -en '\033[01;94m')
+
+# Highlight Option 1 - Default is Bold Cyan
+HIL1=$(echo -en '\033[01;36m')
+
+# Highlight Option 2 - Default is Bold Magenta
+HIL2=$(echo -en '\033[01;35m')
+
+# White Text - Sets the text color to white.
+WHT=$(echo -en '\033[01;37m')
+
+# Title Section - Default is Blue background with White text.
+TITLE=$(echo -en '\033[44m')
+
+# Underline Text - Simply Underlines the text.
+ULNE=$(echo -en '\033[4m')
