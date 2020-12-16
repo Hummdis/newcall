@@ -8,11 +8,13 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.14
+VERSION=1.9.0
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
 WHOIS_DATA=~/tmp/.whois.data
+LAST_DNS_FILE=~/bin/.last_dns
+COLOR_FILE=~/.newcall_colors
 
 # We run this query so many times, why not just do it once, set it and forget it?
 # This may result in an overall reduction in time to run this script.
@@ -22,20 +24,22 @@ DIG_SHORT=''
 
 # Formatting Vars
 ### COLORS ###
+# If the customize file exists, use the colors there.
+if test $COLOR_FILE; then
+    source $COLOR_FILE
+else
+    ALERT=$(echo -en '\033[01;31m')   # Bold Red
+    COOL=$(echo -en '\033[01;32m')    # Bold Green
+    HEAD=$(echo -en '\033[01;33m')    # Bold Yellow
+    INFO=$(echo -en '\033[01;94m')    # Bold Light Blue
+    HIL1=$(echo -en '\033[01;36m')    # Bold Cyan
+    HIL2=$(echo -en '\033[01;35m')    # Bold Magenta
+    WHT=$(echo -en '\033[01;37m')     # Bold White Text
+    TITLE=$(echo -en '\033[44m')      # Blue Background
+    ULNE=$(echo -en '\033[4m')        # Underline
+fi
+# This cannot be changed/customized by the color file
 NC=$(echo -en '\033[0m')          # Reset to normal TTY
-RED=$(echo -en '\033[01;31m')     # Bold Red
-GRN=$(echo -en '\033[01;32m')     # Bold Green
-YEL=$(echo -en '\033[01;33m')     # Bold Yellow
-BLU=$(echo -en '\033[01;94m')     # Bold Light Blue
-CYA=$(echo -en '\033[01;36m')     # Bold Cyan
-MAG=$(echo -en '\033[01;35m')     # Bold Magenta
-WHT=$(echo -en '\033[01;37m')     # Bold White
-LTB=$(echo -en '\033[94m')        # Light Blue
-BLK=$(echo -en '\033[38;5;0m')    # Black - Use with light background.
-BLB=$(echo -en '\033[44m')        # Blue Background
-WTB=$(echo -en '\033[48;5;15m')   # White Background
-ULNE=$(echo -en '\033[4m')        # Underline
-OVW=$(echo -en '\033[0K\r')       # Overwrite existing line. Useful for countdowns....
 
 # These are just place holders. They may be set/reset elsewhere as they're defined here
 # because they should not be blank when the script is actually running.
@@ -57,8 +61,8 @@ SERVER=''       # Used in propagation check.
 IMH='74.124.210.242'   # InMotion Hosting
 RES='216.194.168.112'  # IMH Reseller DNS Servers
 HUB='173.205.127.4'    # Web Hosting Hub DNS
-GOOG='8.8.8.8'         # Google Public DNS
-CF='1.1.1.1'           # Cloudflare Public DNS
+GOOG='8.8.4.4'         # Google Public DNS
+CF='1.0.0.1'           # Cloudflare Public DNS
 L3='209.244.0.3'       # Level3 DNS
 QUAD='9.9.9.9'         # Quad9 DNS
 Q9BL='9.9.9.10'        # Quad9 No Blocks DNS --DEFAULT--
@@ -83,8 +87,6 @@ W13='5.132.191.104'    # OpenNIC (Austria)
 W14='172.98.193.42'    # OpenNIC (BackplaneDNS)
 W15='58.27.149.60'     # OpenNIC (Pakistan)
 W16='91.217.137.37'    # OpenNIC (Russia)
-# Set the default DNS server here:
-DEFDNS="$OPEN"
 
 ## End VARS
 
@@ -112,7 +114,7 @@ usage() {
         veri      : Verisign Public DNS
         nort      : Norton ConnectSafe
         como      : Comodo Secure DNS
-        -OR- Any manually entered ${CYA}IPv4${NC} for a public DNS server.
+        -OR- Any manually entered ${HIL1}IPv4${NC} for a public DNS server.
 
     [OPTIONS] To be used in place of a DNS server.
 
@@ -184,7 +186,7 @@ EOF
 default_search() {
     # For informational purposes, tell the user what DNS server we're using.
     clear # Clear the screen when running this operation.
-    echo "${BLB}${WHT}Using $FDNS_SERVER${BLB}${WHT} (${DNS_SERVER}) DNS Server for results.${NC}"
+    echo "${TITLE}${WHT}Using $FDNS_SERVER${TITLE}${WHT} (${DNS_SERVER}) DNS Server for results.${NC}"
 
     echo ""
 
@@ -201,13 +203,69 @@ default_search() {
     whois_search
 
     echo ""
-    echo -n "${GRN}Checks completed for${NC} $FDOMAIN ${GRN}on: "
+    echo -n "${COOL}Checks completed for${NC} $FDOMAIN ${COOL}on: "
         date
     # Print reminder.
-    echo "Using DNS: $FDNS_SERVER${GRN} ($DNS_SERVER)${NC}"
+    echo "Using DNS: $FDNS_SERVER${COOL} ($DNS_SERVER)${NC}"
     echo ""
     # We're done. Don't allow the default_search to be stacked.
     exit 0
+}
+
+set_default_dns() {
+    # To prevent our IPs from being blocked due to too many queries, automatically
+    # rotate between the largest DNS providers so that we're not hitting a single
+    # provider too many times.
+    # Rotate between Google Public DNS, Cloudflare, Level3, Quad9, OpenDNS,
+    # OpenNIC, Verisign, Norton ConnectSafe DNS and Comodo Secure DNS.
+    if test -f $LAST_DNS_FILE; then
+        LAST_DNS=$(cat $LAST_DNS_FILE)
+    else
+        touch $LAST_DNS_FILE
+        LAST_DNS=0
+    fi
+    LAST_DNS=$((LAST_DNS+1))
+    NEXT_DNS=$LAST_DNS
+    
+    # Make sure we don't go above #9. If so, start over.
+    if [ $NEXT_DNS -gt 9 ]; then
+        LAST_DNS=1
+        NEXT_DNS=1
+    fi
+    
+    if [ $NEXT_DNS -eq 1 ]; then
+        # Google Public DNS
+        DEFDNS=$GOOG
+    elif [ $NEXT_DNS -eq 2 ]; then
+        # Cloudflare Public DNS
+        DEFDNS=$CF
+    elif [ $NEXT_DNS -eq 3 ]; then
+        # Level 3 DNS
+        DEFDNS=$L3
+    elif [ $NEXT_DNS -eq 4 ]; then
+        # Quad9 DNS
+        DEFDNS=$QUAD
+    elif [ $NEXT_DNS -eq 5 ]; then
+        # OpenDNS (Oracle)
+        DEFDNS=$OPEN
+    elif [ $NEXT_DNS -eq 6 ]; then
+        # OpenNIC
+        DEFDNS=$NIC
+    elif [ $NEXT_DNS -eq 7 ]; then
+        # Verisign DNS
+        DEFDNS=$VERI
+    elif [ $NEXT_DNS -eq 8 ]; then
+        # Norton ConnectSafe DNS
+        DEFDNS=$NORT
+    elif [ $NEXT_DNS -eq 9 ]; then
+        # Comodo Secure DNS
+        DEFDNS=$COMO
+    else
+        # InMotion Hosting Main DNS
+        DEFDNS=$IMH
+    fi
+    
+    echo "${LAST_DNS}" > $LAST_DNS_FILE
 }
 
 set_whois() {
@@ -230,11 +288,11 @@ set_whois() {
 
 whois_search() {
     # WHOIS information - Quick Look
-    echo "${YEL}WHOIS${NC} for ${FDOMAIN}:"
+    echo "${HEAD}WHOIS${NC} for ${FDOMAIN}:"
     cat $WHOIS_DATA | grep -i 'Date:\|Status:\|Registrar:' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
     CH=$(cat $WHOIS_DATA | grep -i 'clientHold')
     if [ ! -z "$CH" ]; then
-        echo -e "\n${RED}${ULNE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${NC}\n" | sed 's/^/    /'
+        echo -e "\n${ALERT}${ULNE}*!*!* DOMAIN ON CLIENT HOLD *!*!*${NC}\n" | sed 's/^/    /'
     fi
     reg_check
 }
@@ -242,7 +300,7 @@ whois_search() {
 whois_expanded() {
     # WHOIS information - Expanded Look
     set_whois
-    echo "${YEL}WHOIS Expanded${NC} for ${FDOMAIN}:"
+    echo "${HEAD}WHOIS Expanded${NC} for ${FDOMAIN}:"
     cat $WHOIS_DATA | grep -i 'Date\|Expir\|Server\|Status\|DNSSEC\|Registrar\|Email' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
     reg_check
 }
@@ -250,7 +308,7 @@ whois_expanded() {
 whois_full() {
     # WHOIS information - Full Look
     set_whois
-    echo "${YEL}WHOIS Full${NC} for ${FDOMAIN}:"
+    echo "${HEAD}WHOIS Full${NC} for ${FDOMAIN}:"
     cat $WHOIS_DATA
     reg_check
     # We're done. Don't allow 'whois_full' to be stacked.
@@ -260,14 +318,14 @@ whois_full() {
 reg_check() {
     # Perform lookup on Tucows servers to see if InMotion Hosting is the registrar.
     # Updated Regex code per Nick P.
-    echo "${YEL}Registrar Check${NC} for ${FDOMAIN}:"
+    echo "${HEAD}Registrar Check${NC} for ${FDOMAIN}:"
     # Before we do this, make sure Tucows actually is the registrar, otherwise, don't bother.
     if [[ ! -z $(cat $WHOIS_DATA | grep "Tucows") ]]; then
         ISUS=$(whois -f -h whois.tucows.com ${DOMAIN})
         if [[ $ISUS = *"InMotion Hosting"* ]]; then
-            echo "${MAG}REGISTERED HERE!${NC} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
+            echo "${HIL2}REGISTERED HERE!${NC} - IMH - OK to transfer to Customer Service" | sed 's/^/    /'
         elif [[ $ISUS = *"Web Hosting Hub"* ]]; then
-            echo "${MAG}REGISTERED HERE!${NC} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
+            echo "${HIL2}REGISTERED HERE!${NC} - HUB - OK to transfer to Customer Service" | sed 's/^/    /'
         else
             echo "${WHT}Not Registered Here${NC} - Must contact $(echo $ISUS | grep -i 'reseller:' | grep -Po '(Reseller: \K(\w+))')" | sed 's/^/    /'
         fi
@@ -278,7 +336,7 @@ reg_check() {
 
 ip_search() {
     # IP information.
-    echo "${YEL}IP${NC} (DNS A Record) for ${FDOMAIN}:"
+    echo "${HEAD}IP${NC} (DNS A Record) for ${FDOMAIN}:"
     #echo "${DIG_SHORT}" | sed 's/^/    /' # Use DIG_SHORT var instead of running dig again. -AlexKr
 	# Bug - This breaks the ability to use Newcall to query just the "A" record with the "a" argument.
 	# Therefore, DIG must be called again to ensure full functionality. Plus, since this is all the
@@ -288,7 +346,7 @@ ip_search() {
 
 ptr_search () {
     # Host information
-    echo "${YEL}PTR Record(s)${NC} for ${FDOMAIN}:"
+    echo "${HEAD}PTR Record(s)${NC} for ${FDOMAIN}:"
     for ip in ${DIG_SHORT}; do
         host ${ip} | sed 's/^/    /'
     done
@@ -296,18 +354,18 @@ ptr_search () {
 
 soa_search() {
     # SOA information
-    echo "${YEL}SOA Record${NC} for ${FDOMAIN}:"
+    echo "${HEAD}SOA Record${NC} for ${FDOMAIN}:"
     dig @$DNS_SERVER $DOMAIN SOA +short | sed 's/^/    /'
 }
 
 mx_search () {
     # MX information
-    echo "${YEL}MX Records${NC} for ${FDOMAIN}:"
+    echo "${HEAD}MX Records${NC} for ${FDOMAIN}:"
     MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for Google Workspace test later.
     # echo "DEBUG: MX var = $MX"
     echo -n "${MX}" | sort -n | sed 's/^/    /' # Why not re-use the 'MX' var instead of running dig mx again? -AlexKr
 
-    echo "${YEL}Primary MX Record IP${NC} for ${FDOMAIN}:"
+    echo "${HEAD}Primary MX Record IP${NC} for ${FDOMAIN}:"
     # Just get the IP for the primary MX record that's returned,
     # that is the lowest number (highest priority) returned.
     IP=$(echo "${MX}" | sort -n | awk '{ print $2; exit }' | dig +short -f - | head -1) # Same deal, let's re-use 'MX'
@@ -331,13 +389,13 @@ mx_search () {
 
 arin_search() {
     # This performs an ARIN check on the domain given.
-    echo "${YEL}ARIN${NC} for ${FDOMAIN} ${CYA}($(echo $DIG_SHORT | tail -n 1))${NC}:"
+    echo "${HEAD}ARIN${NC} for ${FDOMAIN} ${HIL1}($(echo $DIG_SHORT | tail -n 1))${NC}:"
     whois -f -d $(echo $DIG_SHORT | tail -n 1) | grep -i 'NetName\|NetRange\|CIDR\|Organization\|City\|Country' | sed 's/^/    /'
 }
 
 ns_check() {
     # This performs the NS check for a given domain.
-    echo "${YEL}Name Servers${NC} for ${FDOMAIN}:"
+    echo "${HEAD}Name Servers${NC} for ${FDOMAIN}:"
     echo "  DIG results:"
     dig $DOMAIN NS +short | sort -n |  sed 's/^/    /'
     echo "  WHOIS NS results:"
@@ -346,13 +404,13 @@ ns_check() {
 
 spf_check() {
     # Find the SPF records and print what's found.
-    echo "${YEL}SPF${NC} for ${FDOMAIN}:"
+    echo "${HEAD}SPF${NC} for ${FDOMAIN}:"
     dig @$DNS_SERVER $DOMAIN TXT | grep 'v=spf' | sed 's/^/    /'
 }
 
 dkim_check() {
     # See if there is a DKIM record for the domain.
-    echo "${YEL}DKIM${NC} for ${FDOMAIN}:"
+    echo "${HEAD}DKIM${NC} for ${FDOMAIN}:"
     MX=$(dig @$DNS_SERVER $DOMAIN MX +short)
     DKIM=$(dig @$DNS_SERVER default._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /')
     if [ -z "${G_SUITE}" ]; then
@@ -364,12 +422,12 @@ dkim_check() {
     fi
     echo "$DKIM"
     if [ $G_SUITE == 'true' ]; then
-        echo "${MAG}GOOGLE WORKSPACE MX records detected on domain ${FDOMAIN}.${NC}"
-        echo "${YEL}GOOGLE WORKSPACE DKIM${NC} for ${FDOMAIN}:"
+        echo "${HIL2}GOOGLE WORKSPACE MX records detected on domain ${FDOMAIN}.${NC}"
+        echo "${HEAD}GOOGLE WORKSPACE DKIM${NC} for ${FDOMAIN}:"
         GDKIM=$(dig @$DNS_SERVER google._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /')
         if [[ -z $GDKIM ]]; then
-            echo "${RED}No DKIM entry found for google._domainkey.$DOMAIN found!${NC}"
-            echo "${YEL}Customer needs to obtain the DKIM key to be used from Google.${NC}"
+            echo "${ALERT}No DKIM entry found for google._domainkey.$DOMAIN found!${NC}"
+            echo "${HEAD}Customer needs to obtain the DKIM key to be used from Google.${NC}"
             echo "https://support.google.com/a/answer/174124?hl=en"
         else
             echo "$GDKIM"
@@ -379,7 +437,7 @@ dkim_check() {
 
 dmarc_check() {
     # See if there is a DMARC record for the domain.
-    echo "${YEL}DMARC${NC} for ${FDOMAIN}:"
+    echo "${HEAD}DMARC${NC} for ${FDOMAIN}:"
     dig @$DNS_SERVER _dmarc.$DOMAIN TXT | grep 'v=' | sed 's/^/    /'
 }
 
@@ -399,14 +457,14 @@ set_dns() {
 dig_once() {
     # We run this dig command so many times why not just run it 
     # once and assign it to a var?
-    DIG_SHORT=$(dig @$DNS_SERVER $DOMAIN +short) 
+    DIG_SHORT=$(dig @$DNS_SERVER $DOMAIN +short)
 }
 
 prop_check() {
     # This is the DNS propagation check for the given domain. We'll check all
     # of the DNS servers we know, including some not used unless this is run.
     clear # Clear the screen before we perform this test.
-    echo -e "${YEL}***** WORLDWIDE DNS PROPAGATION CHECK FOR:${NC} $FDOMAIN ${YEL}*****${NC}"
+    echo -e "${HEAD}***** WORLDWIDE DNS PROPAGATION CHECK FOR:${NC} $FDOMAIN ${HEAD}*****${NC}"
 
     DNS_COUNT=0
     MATCH=0
@@ -417,7 +475,7 @@ prop_check() {
 
         # If there is not a PTR for the DNS record, display the IPv4.
         if [ -z "$FDNS_SERVER" ]; then
-            SERVER=${CYA}${DNS}${NC}
+            SERVER=${HIL1}${DNS}${NC}
         else # Display the PTR as given to us.
             SERVER=$FDNS_SERVER
         fi
@@ -433,7 +491,7 @@ prop_check() {
             # the response from being too slow, we'll limit the check to just
             # two servers.
             if [ -z "$AUTH" ]; then
-                echo "${RED}--ERROR--${NC}"
+                echo "${ALERT}--ERROR--${NC}"
                 echo "Unable to obtain a valid SOA from the first authoritative name server."
                 echo -e "    Trying next available name server...\n"
 
@@ -444,16 +502,16 @@ prop_check() {
                 #AUTH=$(dig @$AUTH_NS $DOMAIN SOA +short | awk '{ print $3 }')
 
                 if [ -z "$AUTH" ]; then
-                    echo "${RED}--ERROR--${NC}"
+                    echo "${ALERT}--ERROR--${NC}"
                     echo "Unable to obtain a valid SOA from the second authoritative name server."
-                    echo -e "\n${RED}***** QUIT *****${NC}"
+                    echo -e "\n${ALERT}***** QUIT *****${NC}"
                     echo "Unable to obtain a valid SOA from an authoritative name server ${AUTH_NS}."
                     echo "Since these are the reported masters, we have nothing to compare other SOA records to."
                     exit 1
                 fi
             else
                 # We have a valid result out of the gate. Use this.
-                echo "${BLU}${WHT}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${NC}"
+                echo "${INFO}${WHT}Authoritative NS (${AUTH_NS}) SOA Serial: ${AUTH}${NC}"
                 RESULT=${AUTH}
             fi
         else
@@ -479,9 +537,9 @@ prop_check() {
         # Compare the two and increment if they match.
         if [ "$SOA" = "$AUTH" ]; then
             MATCH=$((MATCH+1))
-            ANSWER=${GRN}${SOA}${NC}
+            ANSWER=${COOL}${SOA}${NC}
         else
-            ANSWER=${RED}${SOA}${NC}
+            ANSWER=${ALERT}${SOA}${NC}
         fi
 
         # Print the results. Remember, FDNS_SERVER is already formatted.
@@ -492,12 +550,12 @@ prop_check() {
     done
 
     # Print the match results.
-    echo "${YEL}**** MATCH RESULTS: $MATCH OF ${DNS_COUNT} ****${NC}"
+    echo "${HEAD}**** MATCH RESULTS: $MATCH OF ${DNS_COUNT} ****${NC}"
     echo -e ""
 }
 
 caa_check() {
-    echo "${YEL}CAA${NC} FOR ${FDOMAIN}:"
+    echo "${HEAD}CAA${NC} FOR ${FDOMAIN}:"
     dig @$DNS_SERVER $DOMAIN CAA +short | sed 's/^/    /'
 }
 
@@ -562,14 +620,14 @@ update_check() {
         0)  # No update available. Do nothing.
             ;;
         1)  # Report a new version
-            echo "${MAG}Update Check${NC} - Newcall ${YEL}v${NEW_VER} available!${NC}"
+            echo "${HIL2}Update Check${NC} - Newcall ${HEAD}v${NEW_VER} available!${NC}"
             sleep 2
             ;;
         2)  # The public version is older than the current version.
-            echo "${MAG}Update Check${NC} - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
+            echo "${HIL2}Update Check${NC} - Running Newcall version is ${VERSION}, but published version is ${NEW_VER}. Is this a pre-release?"
             ;;
         *)  # All other values are invalid. Report, but don't cause the program to abort.
-            echo "${MAG}Update Check${NC} - Newcall Update Check returned an invalid code ($?)."
+            echo "${HIL2}Update Check${NC} - Newcall Update Check returned an invalid code ($?)."
             ;;
     esac
 }
@@ -609,9 +667,12 @@ visit http://creativecommons.org/licenses/by-sa/4.0/."
         # From Shehab A. -- Allow the copy-and-paste of a domain from a browser by
         # stripping the 'http://' and 'https://' from the domain and the trailing /.
         DOMAIN=$(echo "$USER_DOMAIN" | sed -e 's|^[^/]*//||' -e 's|/.*$||')
-        FDOMAIN=${CYA}${DOMAIN}${NC}
+        FDOMAIN=${HIL1}${DOMAIN}${NC}
         ;;
 esac
+
+# Set default DNS server
+set_default_dns
 
 # If no argument is passed with the domain, we have to set $2 to something
 # for the loop to work correctly and allow stacking of commands.
@@ -711,8 +772,8 @@ do
         spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
             # This is NOT stackable. Only run these options.
             set_dns $DEFDNS
-        dig_once
-        set_whois
+            dig_once
+            set_whois
             ns_check
             ptr_search
             mx_search
@@ -779,7 +840,7 @@ do
                 dig_once
                 default_search
             else
-                echo "${RED}Invalid IPv4 address provided.${NC}. No IPv6 support at this time."
+                echo "${ALERT}Invalid IPv4 address provided.${NC}. No IPv6 support at this time."
                 usage
                 exit 2
             fi
