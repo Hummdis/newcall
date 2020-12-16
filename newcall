@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.8.13
+VERSION=1.8.14
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -84,7 +84,7 @@ W14='172.98.193.42'    # OpenNIC (BackplaneDNS)
 W15='58.27.149.60'     # OpenNIC (Pakistan)
 W16='91.217.137.37'    # OpenNIC (Russia)
 # Set the default DNS server here:
-DEFDNS="$Q9BL"
+DEFDNS="$OPEN"
 
 ## End VARS
 
@@ -303,7 +303,7 @@ soa_search() {
 mx_search () {
     # MX information
     echo "${YEL}MX Records${NC} for ${FDOMAIN}:"
-    MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for G Suite test later.
+    MX=$(dig @$DNS_SERVER $DOMAIN MX +short) # Used for Google Workspace test later.
     # echo "DEBUG: MX var = $MX"
     echo -n "${MX}" | sort -n | sed 's/^/    /' # Why not re-use the 'MX' var instead of running dig mx again? -AlexKr
 
@@ -364,8 +364,8 @@ dkim_check() {
     fi
     echo "$DKIM"
     if [ $G_SUITE == 'true' ]; then
-        echo "${MAG}G SUITE MX records detected on domain ${FDOMAIN}.${NC}"
-        echo "${YEL}G SUITE DKIM${NC} for ${FDOMAIN}:"
+        echo "${MAG}GOOGLE WORKSPACE MX records detected on domain ${FDOMAIN}.${NC}"
+        echo "${YEL}GOOGLE WORKSPACE DKIM${NC} for ${FDOMAIN}:"
         GDKIM=$(dig @$DNS_SERVER google._domainkey.$DOMAIN TXT | grep -i "v=DKIM" | sed 's/^/    /')
         if [[ -z $GDKIM ]]; then
             echo "${RED}No DKIM entry found for google._domainkey.$DOMAIN found!${NC}"
