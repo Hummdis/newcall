@@ -9,11 +9,18 @@
 
 3. You're all set. You can now being using `newcall domain.com` to perform DNS lookups.
 
+## Update
+To perform an update, just run:
+
+    newcall update
+
+That will update your currently used version to the latest available here on Github.
+
 ## Usage
 
 ```Usage: newcall <domain> [dns | ..OPTIONS..]
 
-<domain> - ${WHITE}Required${RESTORE} - This is the TLD to search.
+<domain> - Required - This is the TLD to search.
 
 [dns]    - (Optional) The DNS server to be used.
 Built-In Public DNS Options include:
@@ -69,7 +76,7 @@ reg -or-
 isus -or-
 tucows	: These three options will all trigger the Regisrar lookup process to see where a
 			  domain is registered.
-update	: This will update the Newcall script to the latest version available.
+update	: This will update the Newcall script to the latest version available on Github.
 
 EXAMPLES: newcall hummdis.com
           newcall hummdis.com veri
