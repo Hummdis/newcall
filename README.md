@@ -84,6 +84,13 @@ EXAMPLES: newcall hummdis.com
           newcall hummdis.com ns mx spf dmarc
           newcall hummdis.com spam
 ```
+## Custom Colors
+You can now customize the colors you use for Newcall.  Download the `.newcall_colors` file and make the needed BASH color code changes you want.
+
+    wget -O ~/.newcall_colors https://raw.githubusercontent.com/Hummdis/newcall/master/.newcall_colors
+
+Now, READ THE HEADER COMMENTS and make the desired edits that you want to do.  Since this will be a custom file, this will not auto download with updates or other version changes. This file must be manually downloaded.
+
 ## License
 This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.
 
