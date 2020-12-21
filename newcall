@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.9.0
+VERSION=1.9.1
 
 RUN_PATH=~/bin
 TEMP_DIR=/tmp/$(whoami)
@@ -25,7 +25,7 @@ DIG_SHORT=''
 # Formatting Vars
 ### COLORS ###
 # If the customize file exists, use the colors there.
-if test $COLOR_FILE; then
+if test -f $COLOR_FILE; then
     source $COLOR_FILE
 else
     ALERT=$(echo -en '\033[01;31m')   # Bold Red
