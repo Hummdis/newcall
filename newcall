@@ -8,13 +8,13 @@
 # VARS
 
 # To be implemented with a version check in the future.
-VERSION=1.9.1
+readonly VERSION=1.9.2
 
-RUN_PATH=~/bin
-TEMP_DIR=/tmp/$(whoami)
-WHOIS_DATA=~/tmp/.whois.data
-LAST_DNS_FILE=~/bin/.last_dns
-COLOR_FILE=~/.newcall_colors
+readonly RUN_PATH=~/bin
+readonly TEMP_DIR=/tmp/$(whoami)
+readonly WHOIS_DATA=~/tmp/.whois.data
+readonly LAST_DNS_FILE=~/bin/.last_dns
+readonly COLOR_FILE=~/.newcall_colors
 
 # We run this query so many times, why not just do it once, set it and forget it?
 # This may result in an overall reduction in time to run this script.
@@ -28,18 +28,18 @@ DIG_SHORT=''
 if test -f $COLOR_FILE; then
     source $COLOR_FILE
 else
-    ALERT=$(echo -en '\033[01;31m')   # Bold Red
-    COOL=$(echo -en '\033[01;32m')    # Bold Green
-    HEAD=$(echo -en '\033[01;33m')    # Bold Yellow
-    INFO=$(echo -en '\033[01;94m')    # Bold Light Blue
-    HIL1=$(echo -en '\033[01;36m')    # Bold Cyan
-    HIL2=$(echo -en '\033[01;35m')    # Bold Magenta
-    WHT=$(echo -en '\033[01;37m')     # Bold White Text
-    TITLE=$(echo -en '\033[44m')      # Blue Background
-    ULNE=$(echo -en '\033[4m')        # Underline
+    readonly ALERT=$(echo -en '\033[01;31m')   # Bold Red
+    readonly COOL=$(echo -en '\033[01;32m')    # Bold Green
+    readonly HEAD=$(echo -en '\033[01;33m')    # Bold Yellow
+    readonly INFO=$(echo -en '\033[01;94m')    # Bold Light Blue
+    readonly HIL1=$(echo -en '\033[01;36m')    # Bold Cyan
+    readonly HIL2=$(echo -en '\033[01;35m')    # Bold Magenta
+    readonly WHT=$(echo -en '\033[01;37m')     # Bold White Text
+    readonly TITLE=$(echo -en '\033[44m')      # Blue Background
+    readonly ULNE=$(echo -en '\033[4m')        # Underline
 fi
 # This cannot be changed/customized by the color file
-NC=$(echo -en '\033[0m')          # Reset to normal TTY
+readonly NC=$(echo -en '\033[0m')          # Reset to normal TTY
 
 # These are just place holders. They may be set/reset elsewhere as they're defined here
 # because they should not be blank when the script is actually running.
@@ -72,18 +72,18 @@ VERI='64.6.64.6'       # Verisign DNS
 NORT='199.85.127.10'   # Norton ConnectSafe DNS
 COMO='8.20.247.20'     # Comodo Secure DNS
 W1='51.254.25.115'     # OpenNIC (Czech Republic)
-W2='202.53.93.10'      # NetLinx (India)
+W2='202.134.52.105'    # PhillipCapital (India)
 W3='41.57.125.214'     # Zarnet (Zimbabwe)
 W4='190.111.246.169'   # CPS (Argentina)
-W5='202.46.127.227'    # CNX (Malaysia)
+W5='202.158.38.162'    # PT Cyberindo (Indonesia)
 W6='41.217.204.165'    # Layer3 (Nigeria)
 W7='45.71.185.100'     # OpenNIC (Ecuador)
 W8='87.98.175.85'      # OpenNIC (France)
 W9='51.89.88.66'       # OpenNIC (Germany)
 W10='172.105.220.183'  # OpenNIC (Japan)
-W11='23.100.114.37'    # Sheerwater (Singapore)
-W12='207.148.83.241'   # OpenNIC (Australia)
-W13='5.132.191.104'    # OpenNIC (Austria)
+W11='103.53.197.218'   # NewMedia (Singapore)
+W12='168.1.79.229'     # SoftLayer (Australia)
+W13='146.255.61.177'   # Nessus (Austria)
 W14='172.98.193.42'    # OpenNIC (BackplaneDNS)
 W15='58.27.149.60'     # OpenNIC (Pakistan)
 W16='91.217.137.37'    # OpenNIC (Russia)
@@ -446,7 +446,7 @@ set_dns() {
     # It also allows for the loop to work more effectively.
     # Note: $1 in this case is the server passed to this function!
     DNS_SERVER=$1
-    REV=$(dig -x $DNS_SERVER +short)
+    REV=$(dig -x $DNS_SERVER +short | awk '{ print $1 }' ORS=' ' | awk '{ print $1 }')
     if [ -z "$REV" ]; then
         FDNS_SERVER=${WHT}${1}${NC}
     else
@@ -468,8 +468,10 @@ prop_check() {
 
     DNS_COUNT=0
     MATCH=0
-    for DNS in $IMH $HUB $RES $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO $NORT $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 $W13 $W14 $W15 $W16
-    do
+    DNS_LIST=($IMH $HUB $RES $GOOG $CF $L3 $QUAD $Q9BL $OPEN $NIC $VERI $COMO)
+    DNS_LIST+=($NORT $W1 $W2 $W3 $W4 $W5 $W6 $W7 $W8 $W9 $W10 $W11 $W12 $W13)
+    DNS_LIST+=($W14 $W15 $W16)
+    for DNS in "${DNS_LIST[@]}"; do
         DNS_COUNT=$((DNS_COUNT+1))
         set_dns $DNS
 
