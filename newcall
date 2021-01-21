@@ -8,7 +8,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-readonly VERSION=1.9.2
+readonly VERSION=1.9.3
 
 readonly RUN_PATH=~/bin
 readonly TEMP_DIR=/tmp/$(whoami)
@@ -561,6 +561,11 @@ caa_check() {
     dig @$DNS_SERVER $DOMAIN CAA +short | sed 's/^/    /'
 }
 
+ssl_data() {
+    echo "${HEAD}Current SSL Data${NC} for ${FDOMAIN}:"
+    echo | openssl s_client -servername "$DOMAIN" -connect "$DOMAIN":443 2>/dev/null | openssl x509 -noout -text | awk '/Issuer:/,/Subject:/; /DNS:/' | sed -e 's/^[ \t]*//' | sed 's/^/    /'
+}
+
 # Check for updates to Newcall
 version_compare() {
     # This will return the following numbers for the two arguments passed.
@@ -769,6 +774,7 @@ do
             ptr_search
             arin_search
             caa_check
+            ssl_data
             exit 0
             ;;
         spam) # Check NS, PTR, MX, SPF and DMARC to find causes of spam.
