@@ -97,6 +97,7 @@ This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 Inte
 
 ## Credit
 Special thank you to the following individuals for thier contributions in code, debugging and feedback:
+
     Jamie P.
     Nick P.
     Shehab A.
