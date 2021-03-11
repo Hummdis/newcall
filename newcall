@@ -16,7 +16,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-readonly VERSION="1.9.5"
+readonly VERSION="1.9.4"
 
 readonly RUN_PATH=~/bin
 readonly TEMP_DIR=/tmp/$(whoami)
@@ -650,7 +650,7 @@ version_compare() {
     done
 
     for ((i=0; i<${#ver1[@]}; i++)); do
-        if [[ -z ${ver2[i]} ]]; then
+        if [[ -z "${ver2[i]}" ]]; then
             # Fill empty fields in ver2 with zeros
             ver2[i]=0
         fi
@@ -686,7 +686,7 @@ update_check() {
         wget -O ${TEMP_DIR}/newcall -q https://raw.githubusercontent.com/Hummdis/newcall/master/newcall
     fi
     # Use the existing file to check.
-    NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f 2 | sed -e 's/^"//' -e 's/"$//')
+    NEW_VER=$(cat ${TEMP_DIR}/newcall | grep -m 1 "VERSION=" | cut -d = -f 2)
     version_compare ${NEW_VER} ${VERSION}
     case $? in
         0)  # No update available. Do nothing.
