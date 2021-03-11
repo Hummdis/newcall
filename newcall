@@ -16,7 +16,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-readonly VERSION="1.9.4 Patch 1"
+readonly VERSION="1.9.5"
 
 readonly RUN_PATH=~/bin
 readonly TEMP_DIR=/tmp/$(whoami)
