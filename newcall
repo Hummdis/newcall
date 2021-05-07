@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Created by Jeffrey Shepherd (https://hummdis.com).
 
@@ -16,7 +16,7 @@
 # VARS
 
 # To be implemented with a version check in the future.
-readonly VERSION="1.9.5"
+readonly VERSION="1.9.6"
 
 readonly RUN_PATH=~/bin
 readonly TEMP_DIR=/tmp/$(whoami)
@@ -289,7 +289,7 @@ set_whois() {
     TLD=$(echo ${DOMAIN} | awk -F. '{print $NF}')
     case $TLD in
         com | net | edu)
-            WHOIS_SERV=$(echo ${DOMAIN} | awk -F. '{print $NF}').whois-servers.net
+            WHOIS_SERV=${TLD}.whois-servers.net
             ;;
         *)
             WHOIS_SERV=$(whois -f -h whois.iana.org ${DOMAIN} | egrep -i "redirected to|refer" | head -1 | awk '{print $2}')
@@ -306,9 +306,18 @@ set_whois() {
     MATCH_DOMAIN=$(echo ${DOMAIN} | tr [:lower:] [:upper:])
     WHOIS_CHECK=$(cat ${WHOIS_DATA} | grep "No match for \"${MATCH_DOMAIN}\".")
     if [[ ! -z $WHOIS_CHECK ]]; then
-        echo -e "WHOIS Response: ${ALERT}${WHOIS_CHECK}${NC}"
-        echo -e "${WARN}Check domain regsitration status.${NC}"
-        exit 1
+        # Entering a subdomain causes a failure here, which causes the rest to abort.
+        # Try to remove anything preceeding the first "." and try again.
+        MAIN_DOMAIN=$(echo $DOMAIN | awk -F"." '{print $(NF-1)"."$NF}')
+        MATCH_DOMAIN=$(echo ${MAIN_DOMAIN} | tr [:lower:] [:upper:])
+        whois -f -d -h ${WHOIS_SERV} ${MAIN_DOMAIN} > ${WHOIS_DATA}
+        WHOIS_CHECK=$(cat ${WHOIS_DATA} | grep "No match for \"${MATCH_DOMAIN}\".")
+        if [[ ! -z $WHOIS_CHECK ]]; then
+            echo -e "WHOIS Response: ${ALERT}${WHOIS_CHECK}${NC}"
+            echo -e "${WARN}Check domain regsitration status.${NC}"
+            echo -e "${WARN}Attempted to lookup domains: $DOMAIN and $MAIN_DOMAIN${NC}"
+            exit 1
+        fi
     fi
 }
 
@@ -388,7 +397,12 @@ ip_search() {
     # Bug - This breaks the ability to use Newcall to query just the "A" record with the "a" argument.
     # Therefore, DIG must be called again to ensure full functionality. Plus, since this is all the
     # user is asking to be done, the script does 1 `dig` command either way.
-    dig @$DNS_SERVER $DOMAIN +short | sed 's/^/    /'
+    IP=$(dig @$DNS_SERVER $DOMAIN +short)
+    if [[ ! -z $IP ]]; then
+        echo "    $IP"
+    else
+        echo "    ${ALERT}No 'A' record (a.k.a. glue record) found.${NC}"
+    fi
 }
 
 ptr_search () {
